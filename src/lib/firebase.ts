@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -74,6 +74,10 @@ export async function signIn() {
     console.error('Login error:', error);
     throw error;
   }
+}
+
+export async function loginWithEmail(email: string, pass: string) {
+  return await signInWithEmailAndPassword(auth, email, pass);
 }
 
 export async function logout() {

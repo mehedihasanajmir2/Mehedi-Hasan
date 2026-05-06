@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion } from 'motion/react';
 
-export function Logo({ className = "" }: { className?: string }) {
+export function Logo({ className = "", onClick }: { className?: string, onClick?: () => void }) {
   const logoUrl = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEih11jAXSESceAETWWw0j-TzfeLr0miEP1AFQi4S0BD4hlgLj524ADVAyw2tF1MWbC_R12Cdq4mYs-8Syc_coHQCTjwrsuqnP71UYR_AXgvoRywKRStyFGguhNtUIdPyNuhgFX3FTxSHmei-mQKPjZO4Jah87Z29KkkfBuA1nDX5rYD75JIuyBOWvmJ2SOl/s677/Gemini_Generated_Image_8qqvb58qqvb58qqv-removebg-preview.png";
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative cursor-pointer ${className}`} onClick={onClick}>
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
