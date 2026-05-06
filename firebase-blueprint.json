@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "Settings": {
+      "title": "Website Settings",
+      "description": "Global settings for the portfolio website.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "surname": { "type": "string" },
+        "bio": { "type": "string" },
+        "profileImage": { "type": "string" },
+        "email": { "type": "string" },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "socialProjects": { "type": "string" },
+            "webApps": { "type": "string" },
+            "successRate": { "type": "string" }
+          }
+        }
+      },
+      "required": ["name", "surname", "bio", "profileImage", "email"]
+    },
+    "Project": {
+      "title": "Portfolio Project",
+      "description": "A project showcased in the portfolio.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "tech": { "type": "array", "items": { "type": "string" } },
+        "link": { "type": "string" },
+        "github": { "type": "string" },
+        "type": { "type": "string", "enum": ["web", "app", "other"] },
+        "image": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["title", "description", "tech", "type", "image"]
+    },
+    "Experience": {
+      "title": "Work Experience",
+      "description": "Professional experience entry.",
+      "type": "object",
+      "properties": {
+        "company": { "type": "string" },
+        "role": { "type": "string" },
+        "period": { "type": "string" },
+        "description": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["company", "role", "period", "description"]
+    }
+  },
+  "firestore": {
+    "settings/global": {
+      "schema": "Settings",
+      "description": "Global website configuration."
+    },
+    "projects/{projectId}": {
+      "schema": "Project",
+      "description": "List of portfolio projects."
+    },
+    "experience/{expId}": {
+      "schema": "Experience",
+      "description": "List of professional experiences."
+    }
+  }
+}

@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { 
+      return isSignedIn() && 
+             request.auth.token.email == "mehedihasanajmir2@gmail.com";
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // --- Validation Blueprints ---
+    function isValidSettings(data) {
+      return data.keys().hasAll(['name', 'surname', 'bio', 'profileImage', 'email']) &&
+             data.keys().size() <= 8 && // Allowing for optional fields
+             data.name is string && data.name.size() <= 100 &&
+             data.surname is string && data.surname.size() <= 100 &&
+             data.bio is string && data.bio.size() <= 2000 &&
+             data.profileImage is string && data.profileImage.size() <= 500 &&
+             data.email is string && data.email.size() <= 200;
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['title', 'description', 'tech', 'type', 'image']) &&
+             data.title is string && data.title.size() <= 200 &&
+             data.type in ['web', 'app', 'other'] &&
+             data.tech is list && data.tech.size() <= 20 &&
+             data.image is string && data.image.size() <= 500;
+    }
+
+    function isValidExperience(data) {
+      return data.keys().hasAll(['company', 'role', 'period', 'description']) &&
+             data.company is string && data.company.size() <= 200 &&
+             data.role is string && data.role.size() <= 200 &&
+             data.period is string && data.period.size() <= 100 &&
+             data.description is string && data.description.size() <= 2000;
+    }
+
+    // --- Matches ---
+    match /settings/global {
+      allow read: if true;
+      allow write: if isAdmin() && isValidSettings(incoming());
+    }
+
+    match /projects/{projectId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(projectId) && isValidProject(incoming());
+      allow update: if isAdmin() && isValidProject(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /experience/{expId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(expId) && isValidExperience(incoming());
+      allow update: if isAdmin() && isValidExperience(incoming());
+      allow delete: if isAdmin();
+    }
+  }
+}
