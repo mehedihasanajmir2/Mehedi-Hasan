@@ -15,13 +15,12 @@ import {
   Trash2,
   Save,
   LogOut,
-  Settings as SettingsIcon,
   X,
   Edit2,
   Lock,
   ShieldAlert
 } from 'lucide-react';
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { 
   auth, 
   db, 
@@ -235,14 +234,6 @@ export default function App() {
                 <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-white hover:opacity-100 transition-all">{item}</a>
               ))}
             </div>
-            {isAdminAuthenticated && (
-              <button 
-                onClick={() => setShowAdmin(true)}
-                className="p-2 rounded-full bg-neutral-900 border border-neutral-800 hover:border-indigo-500 transition-colors text-white"
-              >
-                <SettingsIcon className="w-4 h-4" />
-              </button>
-            )}
           </div>
         </div>
       </nav>
@@ -316,8 +307,8 @@ export default function App() {
                     <h3 className="text-2xl font-black uppercase tracking-tighter text-neutral-100 mb-3">{project.title}</h3>
                     <p className="text-neutral-500 text-sm mb-6 leading-tight line-clamp-2 uppercase">{project.description}</p>
                     <div className="flex flex-wrap gap-2">
-                      {project.tech.map(t => (
-                        <span key={t} className="text-[10px] font-bold text-neutral-700 uppercase tracking-widest">{t}</span>
+                      {project.tech.map((t, tIdx) => (
+                        <span key={`${project.id}-${t}-${tIdx}`} className="text-[10px] font-bold text-neutral-700 uppercase tracking-widest">{t}</span>
                       ))}
                     </div>
                   </div>
@@ -377,50 +368,56 @@ export default function App() {
               </div>
            </div>
         </footer>
-      </main>
-      <AnimatePresence>
+      </main>      <AnimatePresence>
         {isPinModalOpen && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4">
-            {loginStep === 'pin' ? (
-              <PinForm 
-                onSuccess={() => {
-                  setLoginStep('login');
-                }} 
-                onCancel={() => setIsPinModalOpen(false)} 
-              />
-            ) : (
-              <LoginForm 
-                onSuccess={() => {
-                  setIsAdminAuthenticated(true);
-                  sessionStorage.setItem('admin_authenticated', 'true');
-                  setIsPinModalOpen(false);
-                  setShowAdmin(true);
-                }}
-                onCancel={() => setIsPinModalOpen(false)}
-              />
-            )}
+          <div className="fixed inset-0 z-[200]">
+            <PINModal 
+              onSuccess={() => {
+                setIsAdminAuthenticated(true);
+                sessionStorage.setItem('admin_authenticated', 'true');
+                setIsPinModalOpen(false);
+                setShowAdmin(true);
+              }} 
+              onCancel={() => setIsPinModalOpen(false)} 
+            />
           </div>
         )}
       </AnimatePresence>
     </div>
   );
 }
-
-function LoginForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
+function AdminLoginModal({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const [isAlerting, setIsAlerting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || attempts >= 3) return;
+
     setLoading(true);
     setError('');
     try {
       await loginWithEmail(email, password);
       onSuccess();
     } catch (err: any) {
-      setError('Invalid credentials or access denied.');
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+      setIsAlerting(true);
+      
+      if (newAttempts >= 3) {
+        setError('CRITICAL ERROR: SYSTEM LOCKDOWN INITIATED');
+        setTimeout(() => {
+          onCancel();
+        }, 2000);
+      } else {
+        setError(`ACCESS DENIED: ${3 - newAttempts} ATTEMPTS REMAINING`);
+        // Stop alerting after 2s
+        setTimeout(() => setIsAlerting(false), 2000);
+      }
     } finally {
       setLoading(false);
     }
@@ -428,297 +425,518 @@ function LoginForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: (
 
   return (
     <motion.div 
-      initial={{ opacity: 0, scale: 0.9 }} 
-      animate={{ opacity: 1, scale: 1 }} 
-      className="w-full max-w-sm bg-neutral-900 border border-neutral-800 p-8 rounded-3xl"
+      initial={{ opacity: 0, scale: 1.2, rotateY: 90 }} 
+      animate={{ opacity: 1, scale: 1, rotateY: 0 }} 
+      transition={{ duration: 0.8, type: "spring" }}
+      className={`w-full max-w-sm border-8 p-8 rounded-[40px] shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden transition-colors duration-200 ${
+        isAlerting ? 'bg-red-950/40 border-red-900 shadow-[0_0_100px_rgba(239,68,68,0.4)]' : 'bg-[#111] border-[#222]'
+      }`}
     >
-      <h3 className="text-2xl font-black uppercase tracking-tighter text-white mb-2">Final Step</h3>
-      <p className="text-neutral-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-8">Admin Credentials Required</p>
-      
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <label className="text-[10px] uppercase font-black text-neutral-600 tracking-widest">Email</label>
-          <input 
-            type="email" 
-            required 
-            value={email} 
-            onChange={e => setEmail(e.target.value)} 
-            className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-4 text-xs focus:outline-none focus:border-indigo-500 text-white" 
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-[10px] uppercase font-black text-neutral-600 tracking-widest">Password</label>
-          <input 
-            type="password" 
-            required 
-            value={password} 
-            onChange={e => setPassword(e.target.value)} 
-            className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-4 text-xs focus:outline-none focus:border-indigo-500 text-white" 
-          />
-        </div>
-        {error && <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest">{error}</p>}
-        <div className="flex flex-col gap-3">
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full py-4 bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-indigo-500 transition-all"
-          >
-            {loading ? 'Authenticating...' : 'Login to Dashboard'}
-          </button>
-          <button 
-            type="button" 
-            onClick={onCancel} 
-            className="w-full py-2 text-neutral-600 font-bold uppercase tracking-widest text-[8px] hover:text-white transition-all"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </motion.div>
-  );
-}
-
-function PinForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
-  const [pin, setPin] = useState('');
-  const [error, setError] = useState('');
-  const [attempts, setAttempts] = useState(0);
-  const [isBlasting, setIsBlasting] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isLocked) return;
-
-    if (pin === '2005') {
-      onSuccess();
-    } else {
-      const newAttempts = attempts + 1;
-      setAttempts(newAttempts);
-      setPin('');
-      
-      if (newAttempts >= 3) {
-        setIsLocked(true);
-        // Step 1: Red Alert starts immediately with intense screen pulse
-        const alertFlash = document.createElement('div');
-        alertFlash.className = 'fixed inset-0 bg-red-600/40 z-[300] pointer-events-none mix-blend-overlay';
-        alertFlash.style.animation = 'pulse 0.2s infinite';
-        document.body.appendChild(alertFlash);
-
-        const style = document.createElement('style');
-        style.innerHTML = `@keyframes pulse { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.8; } }`;
-        document.head.appendChild(style);
-
-        // Step 2: 2 seconds later - The Massive Fire Blast
-        setTimeout(() => {
-          setIsBlasting(true);
-          if (alertFlash.parentNode) document.body.removeChild(alertFlash);
-
-          // Additional Screen Shake
-          document.body.style.animation = 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both';
-          const shakeStyle = document.createElement('style');
-          shakeStyle.innerHTML = `
-            @keyframes shake {
-              10%, 90% { transform: translate3d(-2px, 0, 0); }
-              20%, 80% { transform: translate3d(4px, 0, 0); }
-              30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
-              40%, 60% { transform: translate3d(8px, 0, 0); }
-            }
-          `;
-          document.head.appendChild(shakeStyle);
-
-          setTimeout(() => {
-            setIsBlasting(false);
-            setError('SYSTEM DESTROYED: SECURITY BREACH');
-            setAttempts(0);
-            document.body.style.animation = '';
-            setTimeout(() => setIsLocked(false), 5000); // 5 sec lockdown
-          }, 3000);
-        }, 2000); 
-      } else {
-        setError(`Access Denied. ${3 - newAttempts} attempts remaining.`);
-      }
-    }
-  };
-
-  return (
-    <div className="relative w-full max-w-[400px] perspective-1000">
-      {/* Red Alert Flash */}
+      {/* Alert Overlay */}
       <AnimatePresence>
-        {isLocked && !isBlasting && (
+        {isAlerting && (
           <motion.div 
             initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 1, 0] }}
-            transition={{ repeat: Infinity, duration: 0.5 }}
-            className="fixed inset-0 bg-red-600/20 z-[300] pointer-events-none"
+            animate={{ opacity: [0, 0.4, 0] }}
+            transition={{ repeat: Infinity, duration: 0.4 }}
+            className="absolute inset-0 bg-red-600/20 z-0 pointer-events-none"
           />
         )}
       </AnimatePresence>
 
-      <motion.div 
-        animate={isBlasting ? { 
-          scale: [1, 1.5, 0],
-          rotate: [0, 30, -30, 0],
-          x: [0, -30, 30, -30, 30, 0],
-          y: [0, 30, -30, 30, -30, 0],
-          filter: ["blur(0px)", "blur(20px)", "blur(80px)"]
-        } : {}}
-        transition={{ duration: 2.5, ease: "easeInOut" }}
-        className="w-full bg-neutral-900 border-8 border-neutral-800 p-10 rounded-[40px] shadow-[0_0_100px_rgba(255,0,0,0.4)] relative overflow-hidden"
-      >
-        {/* Vault Dial Effect */}
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-red-500 to-transparent animate-pulse" />
-        
-        <div className="mb-8 flex flex-col items-center">
-          <div className="relative">
-            <div className={`p-6 rounded-full bg-neutral-950 border-4 ${attempts > 0 ? 'border-red-600 shadow-[0_0_20px_rgba(255,0,0,0.5)]' : 'border-neutral-800'} transition-all duration-500`}>
-              <motion.div
-                animate={attempts > 0 ? { rotate: [0, 15, -15, 0], scale: [1, 1.1, 1] } : {}}
-                transition={{ repeat: Infinity, duration: 0.3 }}
-              >
-                {isLocked ? (
-                  <ShieldAlert className="w-12 h-12 text-red-500 animate-pulse" />
-                ) : (
-                  <Lock className={`w-12 h-12 ${attempts > 0 ? 'text-red-500' : 'text-indigo-500'}`} />
-                )}
-              </motion.div>
-            </div>
-            {/* Status Lights */}
-            <div className="flex gap-2 mt-4 justify-center">
-              {[1, 2, 3].map(i => (
-                <div key={i} className={`w-3 h-3 rounded-full transition-all duration-300 ${attempts >= i ? 'bg-red-500 shadow-[0_0_15px_red] scale-125' : 'bg-neutral-800'}`} />
-              ))}
-            </div>
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
+      
+      <div className="relative z-10">
+        <div className="flex justify-center mb-8">
+          <div className="p-4 rounded-full bg-neutral-950 border-2 border-neutral-800 shadow-inner">
+            <User className={`w-8 h-8 transition-colors ${isAlerting ? 'text-red-500' : 'text-neutral-500'}`} />
           </div>
         </div>
 
-        <h3 className="text-xl font-black uppercase tracking-[0.2em] text-white text-center mb-1">Vault Secure</h3>
-        <p className="text-neutral-500 text-[8px] uppercase font-bold tracking-[0.3em] text-center mb-10">Encrypted Terminal V.2</p>
+        <h3 className="text-xl font-black uppercase tracking-[0.2em] text-white text-center mb-1">Central Access</h3>
+        <p className="text-neutral-500 text-[8px] uppercase font-bold tracking-[0.3em] text-center mb-10 italic">Tier 2 Verification Required</p>
         
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="relative group">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[9px] uppercase font-black text-neutral-600 tracking-[0.3em] ml-2">Identity Hub (Email)</label>
             <input 
-              type="password" 
-              autoFocus 
-              disabled={isLocked}
-              value={pin}
-              onChange={e => setPin(e.target.value)}
-              placeholder="0000"
-              className={`w-full bg-black border-4 ${isLocked ? 'border-red-900 text-red-600 shadow-[inset_0_0_20px_rgba(255,0,0,0.3)]' : 'border-neutral-800 text-white'} rounded-2xl py-6 text-center text-4xl font-mono focus:border-indigo-500 transition-all tracking-[0.4em] outline-none shadow-inner`}
+              type="email" 
+              required 
+              autoFocus
+              disabled={loading || attempts >= 3}
+              value={email} 
+              onChange={e => setEmail(e.target.value)} 
+              className="w-full bg-black border-2 border-neutral-800 rounded-2xl p-4 text-sm font-mono focus:outline-none focus:border-blue-500 transition-all text-white placeholder:text-neutral-800 disabled:opacity-50" 
+              placeholder="ADMIN@SECTOR.7"
             />
           </div>
-
+          <div className="space-y-2">
+            <label className="text-[9px] uppercase font-black text-neutral-600 tracking-[0.3em] ml-2">Security Key (Password)</label>
+            <input 
+              type="password" 
+              required 
+              disabled={loading || attempts >= 3}
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+              className="w-full bg-black border-2 border-neutral-800 rounded-2xl p-4 text-sm font-mono focus:outline-none focus:border-blue-500 transition-all text-white disabled:opacity-50" 
+            />
+          </div>
+          
           {error && (
             <motion.p 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-red-500 text-[10px] font-black uppercase tracking-widest text-center bg-red-500/10 py-2 rounded-lg"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className={`${isAlerting || attempts >= 3 ? 'text-red-400' : 'text-red-500'} text-[10px] font-black uppercase tracking-widest text-center bg-red-500/5 py-2 rounded-lg border border-red-500/20`}
             >
               {error}
             </motion.p>
           )}
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 pt-4">
             <button 
               type="submit" 
-              disabled={isLocked}
-              className={`w-full py-5 ${isLocked ? 'bg-neutral-800' : 'bg-indigo-600 hover:bg-indigo-500'} text-white font-black uppercase tracking-[0.2em] text-xs rounded-2xl transition-all shadow-lg active:scale-95`}
+              disabled={loading || attempts >= 3}
+              className={`group relative w-full py-5 font-black uppercase tracking-[0.2em] text-[10px] rounded-2xl transition-all shadow-xl active:scale-95 disabled:opacity-50 ${
+                isAlerting ? 'bg-red-600 text-white' : 'bg-neutral-100 hover:bg-white text-black'
+              }`}
             >
-              Initialize Unlock
+              <span className="relative z-10">
+                {attempts >= 3 ? 'SYSTEM LOCKED' : loading ? 'VERIFYING...' : 'CONFIRM ACCESS'}
+              </span>
+              {!isAlerting && <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />}
             </button>
+            
             <button 
               type="button" 
               onClick={onCancel} 
-              className="w-full text-neutral-600 font-bold uppercase tracking-widest text-[8px] hover:text-white transition-all"
+              className="w-full py-2 text-neutral-600 font-bold uppercase tracking-widest text-[8px] hover:text-white transition-all flex items-center justify-center gap-2"
             >
-              Abort Entry
+              <X className="w-3 h-3" />
+              Security Exit
             </button>
           </div>
         </form>
+      </div>
 
-        {/* Decorative Bolts */}
-        <div className="absolute top-4 left-4 w-3 h-3 bg-neutral-800 rounded-full shadow-inner" />
-        <div className="absolute top-4 right-4 w-3 h-3 bg-neutral-800 rounded-full shadow-inner" />
-        <div className="absolute bottom-4 left-4 w-3 h-3 bg-neutral-800 rounded-full shadow-inner" />
-        <div className="absolute bottom-4 right-4 w-3 h-3 bg-neutral-800 rounded-full shadow-inner" />
-      </motion.div>
+      {/* Industrial accents */}
+      <div className="absolute top-4 left-4 w-2 h-2 bg-neutral-800 rounded-full" />
+      <div className="absolute top-4 right-4 w-2 h-2 bg-neutral-800 rounded-full" />
+      <div className="absolute bottom-4 left-4 w-2 h-2 bg-neutral-800 rounded-full" />
+      <div className="absolute bottom-4 right-4 w-2 h-2 bg-neutral-800 rounded-full" />
+    </motion.div>
+  );
+}
 
-      {/* Explosion Particles */}
+function PINModal({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
+
+  const [step, setStep] = useState<'pin' | 'success_alert' | 'sliding_out' | 'door_opening' | 'login'>('pin');
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
+  const [attempts, setAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [isRedAlert, setIsRedAlert] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const initAudio = () => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
+      return audioCtxRef.current;
+    } catch (e) {
+      console.error("Audio Context failed", e);
+      return null;
+    }
+  };
+
+  const playClick = () => {
+    const ctx = initAudio();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(10, ctx.currentTime + 0.05);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.05);
+  };
+
+  const playError = () => {
+    const ctx = initAudio();
+    if (!ctx) return;
+    
+    // Create an aggressive "REJECTED" sound
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const osc3 = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc1.type = 'sawtooth';
+    osc2.type = 'square';
+    osc3.type = 'sawtooth';
+    
+    const now = ctx.currentTime;
+    
+    // Low, dissonant cluster
+    osc1.frequency.setValueAtTime(80, now);
+    osc2.frequency.setValueAtTime(85, now);
+    osc3.frequency.setValueAtTime(92, now);
+    
+    // Rapid downward sweep
+    osc1.frequency.exponentialRampToValueAtTime(40, now + 0.4);
+    osc2.frequency.exponentialRampToValueAtTime(40, now + 0.4);
+    osc3.frequency.exponentialRampToValueAtTime(40, now + 0.4);
+    
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+    
+    osc1.connect(gain);
+    osc2.connect(gain);
+    osc3.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc1.start();
+    osc2.start();
+    osc3.start();
+    osc1.stop(now + 0.4);
+    osc2.stop(now + 0.4);
+    osc3.stop(now + 0.4);
+  };
+
+  const playSiren = () => {
+    const ctx = initAudio();
+    if (!ctx) return;
+    
+    const now = ctx.currentTime;
+    const duration = 5;
+    
+    // Harsher, faster siren
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(600, now);
+    
+    // Rapid pulsating sweeps
+    for (let i = 0; i < duration * 2; i++) {
+      osc.frequency.exponentialRampToValueAtTime(1200, now + (i * 0.5) + 0.25);
+      osc.frequency.exponentialRampToValueAtTime(600, now + (i * 0.5) + 0.5);
+    }
+    
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.linearRampToValueAtTime(0.1, now + duration - 0.5);
+    gain.gain.linearRampToValueAtTime(0, now + duration);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(now + duration);
+  };
+
+  const playSuccess = () => {
+    const ctx = initAudio();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sine';
+    // Higher pitched melodic chime
+    osc.frequency.setValueAtTime(523.25, now); // C5
+    osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.2); // G5
+    
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(now + 0.5);
+  };
+
+  const handleNumberClick = (num: string) => {
+    if (isLocked || step !== 'pin' || pin.length >= 4) return;
+    playClick();
+    setPin(prev => prev + num);
+    setError('');
+  };
+
+  const handleClear = () => {
+    if (isLocked || step !== 'pin') return;
+    playClick();
+    setPin('');
+  };
+
+  const handleEnter = () => {
+    if (isLocked || step !== 'pin') return;
+    
+    if (pin === '2005') {
+      playSuccess();
+      // Step 1: Green Alert Pulse (2s)
+      setStep('success_alert');
+      
+      // Step 2: Keypad slides out
+      setTimeout(() => {
+        setStep('sliding_out');
+        
+        // Step 3: Vault door starts opening animation
+        setTimeout(() => {
+          setStep('door_opening');
+                        // Step 4: Login form revealed and door finish sliding
+          setTimeout(() => {
+            setStep('login');
+          }, 5000);
+        }, 800);
+      }, 2000);
+    } else {
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+      setPin('');
+
+      if (newAttempts >= 3) {
+        playSiren();
+        setIsRedAlert(true);
+        setIsLocked(true);
+        
+        setTimeout(() => {
+          setIsRedAlert(false);
+          onCancel();
+        }, 5000); 
+      } else {
+        playError();
+        // Just flash the LEDs (which happens automatically via the attempts state)
+        // No full screen red alert here
+      }
+    }
+  };
+
+  const KeyButton = ({ label, onClick, className = "", colorClass = "bg-[#add8e6]" }: { key?: string; label: string; onClick: () => void; className?: string; colorClass?: string }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={isLocked || step !== 'pin'}
+      className={`h-16 flex items-center justify-center rounded-xl border-t-2 border-l-2 border-white/30 border-r-2 border-b-2 border-black/40 shadow-[2px_2px_5px_rgba(0,0,0,0.4)] active:shadow-inner active:translate-y-[1px] transition-all ${colorClass} ${className}`}
+    >
+      <span className="text-2xl font-black text-black/80">{label}</span>
+    </button>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 overflow-hidden">
       <AnimatePresence>
-        {isBlasting && (
-          <>
-            {/* Intense Screen Flash */}
+        {isRedAlert && (
+          <motion.div 
+            key="red-alert-full-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[400] pointer-events-none flex items-center justify-center overflow-hidden"
+          >
+            {/* The flickering scary red overlay */}
             <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 1, 0.8, 1, 0] }}
-              transition={{ duration: 2 }}
-              className="fixed inset-0 bg-white/50 z-[280] pointer-events-none mix-blend-overlay"
+              animate={{ opacity: [0.4, 0.8, 0.3, 1, 0.2] }}
+              transition={{ repeat: Infinity, duration: 0.1, ease: "linear" }}
+              className="absolute inset-0 bg-red-600/40 mix-blend-overlay"
             />
-
-            {/* Shockwaves */}
-            {[...Array(8)].map((_, i) => (
-              <motion.div
-                key={`shock-${i}`}
-                initial={{ scale: 0, opacity: 1, border: '8px solid white' }}
-                animate={{ scale: 80, opacity: 0, border: '1px solid orange' }}
-                transition={{ duration: 1, delay: i * 0.05, ease: "easeOut" }}
-                className="absolute top-1/2 left-1/2 w-10 h-10 rounded-full z-[260] pointer-events-none blur-md"
-                style={{ marginLeft: -20, marginTop: -20 }}
-              />
-            ))}
-
-            {/* Massive Fire and Plumes */}
-            {[...Array(120)].map((_, i) => (
-              <motion.div
-                key={`fire-${i}`}
-                initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
-                animate={{ 
-                  x: (Math.random() - 0.5) * 2500, 
-                  y: (Math.random() - 0.5) * 2500, 
-                  opacity: 0,
-                  scale: [1, 6, 0],
-                  rotate: Math.random() * 2000
-                }}
-                transition={{ duration: 2 + Math.random(), ease: "easeOut" }}
-                className={`absolute top-1/2 left-1/2 rounded-full z-[250] ${
-                  i % 6 === 0 ? 'bg-white w-20 h-20 blur-xl' : 
-                  i % 6 === 1 ? 'bg-yellow-300 w-16 h-16 blur-md' : 
-                  i % 6 === 2 ? 'bg-orange-500 w-24 h-24 blur-2xl' :
-                  i % 6 === 3 ? 'bg-red-600 w-20 h-20 shadow-[0_0_80px_#ff0000]' :
-                  i % 6 === 4 ? 'bg-orange-400 w-4 h-4' : // Embers
-                  'bg-zinc-100 w-1 h-1 shadow-[0_0_10px_white]' // Extreme sparks
-                }`}
-                style={{ marginLeft: -10, marginTop: -10 }}
-              />
-            ))}
-
-            {/* Heavy Smoke Clouds */}
-            {[...Array(50)].map((_, i) => (
-              <motion.div
-                key={`smoke-${i}`}
-                initial={{ x: 0, y: 0, opacity: 0.9, scale: 1 }}
-                animate={{ 
-                  x: (Math.random() - 0.5) * 1500, 
-                  y: (Math.random() - 0.5) * 1500, 
-                  opacity: 0,
-                  scale: [1, 25],
-                }}
-                transition={{ duration: 4, ease: "easeOut" }}
-                className="absolute top-1/2 left-1/2 w-48 h-48 bg-neutral-900/90 rounded-full blur-[80px] z-[240]"
-                style={{ marginLeft: -96, marginTop: -96 }}
-              />
-            ))}
-
-            {/* Ultimate Central Fire Core */}
             <motion.div 
-              initial={{ scale: 0, opacity: 1 }}
-              animate={{ scale: [0, 80, 100], opacity: [1, 1, 0] }}
-              transition={{ duration: 1.5, ease: "easeOut" }}
-              className="absolute top-1/2 left-1/2 w-32 h-32 bg-gradient-radial from-white via-yellow-400 via-orange-600 to-red-800 rounded-full z-[270] blur-3xl shadow-[0_0_150px_rgba(255,100,0,1)]"
-              style={{ marginLeft: -64, marginTop: -64 }}
+              animate={{ opacity: [0.1, 0.5, 0.1] }}
+              transition={{ repeat: Infinity, duration: 0.05, ease: "linear" }}
+              className="absolute inset-0 bg-red-900/60"
             />
-          </>
+            
+            {/* Scanning Lines */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-10 bg-[length:100%_2px,3px_100%] pointer-events-none" />
+
+            <div className="relative z-20 flex flex-col items-center gap-4">
+              <motion.div
+                animate={{ scale: [1, 1.4, 1], rotate: [0, -5, 5, -5, 5, 0] }}
+                transition={{ repeat: Infinity, duration: 0.15 }}
+              >
+                <ShieldAlert className="w-56 h-56 text-red-500 drop-shadow-[0_0_30px_rgba(239,68,68,1)]" />
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+
+        {isLocked && (
+          <motion.div 
+            key="locked-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-red-950/20 z-[300] pointer-events-none"
+          />
+        )}
+        {step === 'success_alert' && (
+          <motion.div 
+            key="success-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ repeat: Infinity, duration: 0.4 }}
+            className="fixed inset-0 bg-green-500/30 z-[300] pointer-events-none mix-blend-overlay"
+          />
         )}
       </AnimatePresence>
+
+      <div className="relative w-full h-full flex items-center justify-center">
+        
+        {/* Step 3: Formal Login Content (Revealed after door opens) */}
+        {(step === 'door_opening' || step === 'login') && (
+          <motion.div
+            key="login-modal-reveal"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={step === 'login' ? { opacity: 1, scale: 1 } : { opacity: 0.3, scale: 0.9 }}
+            className="absolute inset-0 flex items-center justify-center z-[50]"
+          >
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-green-500/10 blur-[100px] rounded-full pointer-events-none" />
+            <AdminLoginModal onSuccess={onSuccess} onCancel={onCancel} />
+          </motion.div>
+        )}
+
+        {/* Step 1: Keypad - slides away to the right */}
+        <motion.div 
+          animate={
+            isRedAlert ? { 
+              x: [0, -10, 10, -10, 10, 0],
+              y: [0, 5, -5, 5, -5, 0],
+              rotate: [0, -1, 1, -1, 1, 0]
+            } : 
+            step !== 'pin' && step !== 'success_alert' ? { 
+              x: "150%", 
+              opacity: 0,
+              rotateY: 20,
+              scale: 0.8,
+            } : { x: 0, opacity: 1 }
+          }
+          transition={isRedAlert ? { repeat: Infinity, duration: 0.1 } : { duration: 0.8, ease: "easeInOut" }}
+          className="w-full max-w-[360px] bg-[#1a1a1a] p-6 rounded-[30px] border-[12px] border-[#2a2a2a] shadow-[10px_10px_30px_rgba(0,0,0,0.8)] relative z-[100]"
+        >
+          {/* LED Indicators */}
+          <div className="flex justify-center gap-6 mb-6">
+            {[0, 1, 2].map((i) => {
+              const isCorrect = step !== 'pin';
+              const isFailed = attempts > i;
+              return (
+                <div key={`led-${i}`} className="flex flex-col items-center gap-1.5">
+                  <div 
+                    className={`w-4 h-4 rounded-full transition-all duration-500 border-2 border-black/20 ${
+                      isCorrect ? 'bg-green-400 shadow-[0_0_15px_#4ade80,0_0_25px_#22c55e]' : 
+                      isFailed ? 'bg-red-500 shadow-[0_0_15px_#ef4444,0_0_25px_#dc2626]' : 
+                      'bg-neutral-800 shadow-inner'
+                    }`} 
+                  />
+                  <div className={`text-[6px] font-black uppercase tracking-[0.2em] transition-colors duration-500 ${isCorrect ? 'text-green-500' : isFailed ? 'text-red-500' : 'text-neutral-700'}`}>
+                    UNIT {i + 1}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Device screen area */}
+          <div className="bg-[#101525] rounded-lg p-5 mb-6 border-b-4 border-[#222] shadow-inner relative overflow-hidden h-24 flex flex-col justify-center items-center">
+            <div className={`absolute inset-0 ${step === 'success_alert' ? 'bg-green-500/10' : 'bg-gradient-to-b from-blue-900/10 to-transparent'} pointer-events-none`} />
+            {isLocked ? (
+              <div className="text-red-500 font-mono text-lg font-black animate-pulse uppercase tracking-tighter">System Locked</div>
+            ) : step === 'success_alert' ? (
+              <div className="text-green-500 font-mono text-lg font-black animate-pulse uppercase tracking-tighter">Access Granted</div>
+            ) : (
+              <>
+                <div className="flex gap-3 mb-1">
+                  {[0, 1, 2, 3].map(i => (
+                    <div key={`dot-${i}`} className={`w-4 h-4 rounded-full border-2 border-blue-500/30 ${pin.length > i ? 'bg-blue-400 shadow-[0_0_10px_#60a5fa]' : 'bg-transparent'}`} />
+                  ))}
+                </div>
+                <div className="text-blue-400/50 font-mono text-[8px] uppercase tracking-[0.2em] mt-2">Enter Access Key</div>
+              </>
+            )}
+          </div>
+
+          {/* Keypad Grid */}
+          <div className="grid grid-cols-3 gap-3">
+            {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
+              <KeyButton key={num} label={num} onClick={() => handleNumberClick(num)} />
+            ))}
+            <KeyButton key="clear" label="CLEAR" onClick={handleClear} colorClass="bg-[#ff0000]" className="!text-[12px] font-black" />
+            <KeyButton key="0" label="0" onClick={() => handleNumberClick('0')} />
+            <KeyButton key="enter" label="ENTER" onClick={handleEnter} colorClass={step === 'success_alert' ? 'bg-green-400' : 'bg-[#00c851]'} className="!text-[12px] font-black" />
+          </div>
+
+          <button onClick={onCancel} className="absolute top-2 right-4 text-white/10 hover:text-white/40"><X className="w-4 h-4" /></button>
+        </motion.div>
+
+        {/* The Sliding Vault Doors */}
+        <AnimatePresence>
+          {(step === 'door_opening' || step === 'login') && (
+            <div className="absolute inset-0 z-[200] flex pointer-events-none overflow-hidden">
+              {/* Green Light Burst behind doors */}
+              {step === 'door_opening' && (
+                <motion.div 
+                  key="light-burst"
+                  initial={{ opacity: 0, scaleX: 0, scaleY: 0.1 }}
+                  animate={{ 
+                    opacity: [0, 0, 1, 0.8, 1], 
+                    scaleX: [0, 0, 1, 3, 6], 
+                    scaleY: [0.1, 0.1, 0.5, 2, 4] 
+                  }}
+                  transition={{ duration: 5, times: [0, 0.1, 0.2, 0.5, 1], ease: "easeInOut" }}
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-full bg-green-400 blur-[60px] z-[150]"
+                />
+              )}
+                            {/* Left Door */}
+              <motion.div 
+                key="left-vault-door"
+                initial={{ x: 0 }}
+                animate={(step === 'door_opening' || step === 'login') ? { x: "-100%" } : { x: 0 }}
+                transition={{ duration: 5, ease: "easeInOut" }}
+                className="w-1/2 h-full bg-[#111] border-r-8 border-[#333] shadow-[inner_0_0_100px_rgba(0,0,0,1)] relative flex items-center justify-end overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_right,_#222,_#111)]" />
+                <div className="mr-8 z-10">
+                  <div className="w-40 h-40 rounded-full border-[12px] border-[#222] shadow-[inset_0_0_40px_rgba(0,0,0,1)] relative flex items-center justify-center bg-[#0a0a0a]">
+                    <motion.div 
+                      animate={(step === 'door_opening' || step === 'login') ? { rotate: 720 } : {}}
+                      transition={{ duration: 5, ease: "easeInOut" }}
+                      className="w-28 h-6 bg-neutral-800 rounded-full shadow-lg border-2 border-neutral-700"
+                    />
+                    <div className="absolute w-8 h-8 rounded-full bg-neutral-900 border-4 border-neutral-800" />
+                  </div>
+                </div>
+              </motion.div>
+              {/* Right Door */}
+              <motion.div 
+                key="right-vault-door"
+                initial={{ x: 0 }}
+                animate={(step === 'door_opening' || step === 'login') ? { x: "100%" } : { x: 0 }}
+                transition={{ duration: 5, ease: "easeInOut" }}
+                className="w-1/2 h-full bg-[#111] border-l-8 border-[#333] shadow-[inner_0_0_100px_rgba(0,0,0,1)] relative flex items-center justify-start overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_left,_#222,_#111)]" />
+                <div className="ml-8 z-10">
+                  <div className="w-40 h-40 rounded-full border-[12px] border-[#222] shadow-[inset_0_0_40px_rgba(0,0,0,1)] relative flex items-center justify-center bg-[#0a0a0a]">
+                    <motion.div 
+                      animate={(step === 'door_opening' || step === 'login') ? { rotate: -720 } : {}}
+                      transition={{ duration: 5, ease: "easeInOut" }}
+                      className="w-28 h-6 bg-neutral-800 rounded-full shadow-lg border-2 border-neutral-700"
+                    />
+                    <div className="absolute w-8 h-8 rounded-full bg-neutral-900 border-4 border-neutral-800" />
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
