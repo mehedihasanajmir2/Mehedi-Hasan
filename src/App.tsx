@@ -119,18 +119,18 @@ export default function App() {
       if (docSnap.exists()) {
         setSettings(docSnap.data() as SiteSettings);
       }
-      setLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, 'settings/global');
-      setLoading(false);
     });
 
     const projectsQuery = query(collection(db, 'projects'), orderBy('order', 'asc'));
     const unsubscribeProjects = onSnapshot(projectsQuery, (snapshot) => {
       const projectsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
       setProjects(projectsData);
+      setLoading(false); // Only stop loading after we have projects or settings
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'projects');
+      setLoading(false);
     });
 
     const experienceQuery = query(collection(db, 'experience'), orderBy('order', 'asc'));
@@ -149,27 +149,8 @@ export default function App() {
     };
   }, []);
 
-  if (loading) return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8 overflow-hidden relative">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent pointer-events-none" />
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="relative z-10 flex flex-col items-center"
-      >
-        <Logo className="scale-150 mb-12 animate-pulse" />
-        <div className="w-12 h-[2px] bg-neutral-900 overflow-hidden rounded-full">
-          <motion.div 
-            initial={{ x: '-100%' }}
-            animate={{ x: '100%' }}
-            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-            className="w-full h-full bg-indigo-500"
-          />
-        </div>
-      </motion.div>
-    </div>
-  );
-
+  // Removed blocking global loading screen for instant feel
+  
   const siteData = settings || {
     name: 'Mehedi',
     surname: 'Hasan',
