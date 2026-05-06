@@ -1,25 +1,32 @@
-# Security Spec for MH.Studio Portfolio
+# Security Specification - MH Studio
 
-## 1. Data Invariants
-- `settings/global`: Only one document exists. It contains site-wide config like name, bio, and hero image.
-- `projects`: Each project must have a title, type (web/app/other), and image URL.
-- `experience`: Each experience entry must have a period and role.
-- All writes are restricted to the authorized admin (`mehedihasanajmir2@gmail.com`).
+## Data Invariants
+1.  **Global Settings**: Only one document at `settings/global`.
+2.  **Projects**: Each project must have a title, description, tech stack, and image.
+3.  **Experience**: Each experience entry must have a company, role, period, and description.
+4.  **Admin Access**: Only authorized emails can write to the database.
 
-## 2. The "Dirty Dozen" Payloads (Deny cases)
-1. **Unauthenticated Write**: Attempting to update `settings/global` without logging in.
-2. **Identity Spoofing**: Logged-in user with different email trying to update projects.
-3. **Ghost Field in Settings**: Adding `isAdmin: true` to the settings document.
-4. **Invalid Project Type**: Setting project type to `secret_project`.
-5. **Huge ID Mutation**: Attempting to create a project with a 2KB document ID.
-6. **Bypassing Validation**: Creating a project without a title.
-7. **Invalid Array Type**: Putting an object inside the `tech` array of a project.
-8. **Malicious Link**: Injecting a `javascript:` payload into a project link.
-9. **Tampering with Timestamps**: Setting `updatedAt` to a future time.
-10. **State Shortcut**: (N/A for this simple CRUD app, but maybe for 'order' field).
-11. **PII Leak**: Unauthorized user trying to read private admin metadata (if any).
-12. **Denial of Wallet**: Sending 1MB of text in the `bio` field.
+## Identity & Access Control
+-   **Read**: Public access to all core collections (`settings`, `projects`, `experience`).
+-   **Write**: Restricted to administrative users (verified email `mehedihasanajmir2@gmail.com`).
 
-## 3. Test Runner (Conceptual)
-All tests check for `PERMISSION_DENIED` on any write if `request.auth.token.email != 'mehedihasanajmir2@gmail.com'`.
-Read access is allowed for everyone (public portfolio).
+## The "Dirty Dozen" Payloads (Denial Expected)
+1.  **Anonymous Write to Settings**: Attempting to update `settings/global` without being signed in.
+2.  **Non-Admin Update to Projects**: Authenticated but non-admin user attempting to edit a project.
+3.  **Invalid Project Schema**: Creating a project missing the `tech` array.
+4.  **Malicious ID Injected**: Using a huge string (1KB+) as a project ID.
+5.  **Extra Fields (Shadow Update)**: Adding a `isVerified: true` field to a project document.
+6.  **Type Mismatch**: Sending a string for a number field (e.g., `order` as "first").
+7.  **Email Spoofing**: Attempting to write as an admin but with an unverified email.
+8.  **Empty ID**: Attempting to write to a project with an empty string ID.
+9.  **Scale Attack**: Sending a project with 100+ tech tags.
+10. **Terminal State Lock Bypass**: (If applicable, not in this app yet).
+11. **PII Leak**: (No PII in public collections, only email in settings which is public).
+12. **Recursive Cost Attack**: Attempting to list collections with heavy filter logic.
+
+## Conflict Report
+| Collection | Identity Spoofing | State Shortcutting | Resource Poisoning |
+| :--- | :--- | :--- | :--- |
+| `settings` | Protected (isAdmin) | N/A | Protected (isValidSettings) |
+| `projects` | Protected (isAdmin) | N/A | Protected (isValidProject) |
+| `experience`| Protected (isAdmin) | N/A | Protected (isValidExperience) |

@@ -19,15 +19,34 @@ import {
   X,
   Edit2
 } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
-import { supabase } from './lib/supabase';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { 
+  auth, 
+  db, 
+  signIn, 
+  logout, 
+  handleFirestoreError, 
+  OperationType 
+} from './lib/firebase';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { 
+  collection, 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  doc, 
+  setDoc, 
+  deleteDoc, 
+  getDoc
+} from 'firebase/firestore';
+
+import { Logo } from './components/Logo';
+
+// Lazy load admin components to speed up initial site load
+const AdminDashboard = lazy(() => import('./components/AdminComponents').then(module => ({ default: module.AdminDashboard })));
 
 // --- Error Handling ---
-function handleSupabaseError(error: any) {
-  console.error('Supabase Error: ', error);
-  throw error;
-}
+// handleFirestoreError is imported from ./lib/firebase
 
 // --- Types ---
 interface SiteSettings {
@@ -84,88 +103,70 @@ export default function App() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [experiences, setExperiences] = useState<Experience[]>([]);
-  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAdmin, setShowAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'web' | 'app' | 'other'>('all');
 
   useEffect(() => {
     // Auth Listener
-    const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
     });
 
-    // Initial Data Fetch
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Fetch Settings
-        const { data: settingsData, error: settingsError } = await supabase
-          .from('settings')
-          .select('*')
-          .eq('id', 'global')
-          .single();
-        
-        if (settingsError && settingsError.code !== 'PGRST116') { // PGRST116 is empty result
-          console.error('Settings error:', settingsError);
-        } else if (settingsData) {
-          setSettings(settingsData as any);
-        }
-
-        // Fetch Projects
-        const { data: projectsData, error: projectsError } = await supabase
-          .from('projects')
-          .select('*')
-          .order('order', { ascending: true });
-        
-        if (projectsError) console.error('Projects error:', projectsError);
-        else setProjects(projectsData || []);
-
-        // Fetch Experience
-        const { data: expData, error: expError } = await supabase
-          .from('experience')
-          .select('*')
-          .order('order', { ascending: true });
-        
-        if (expError) console.error('Experience error:', expError);
-        else setExperiences(expData || []);
-
-      } catch (err) {
-        console.error('Fetch error:', err);
-      } finally {
-        setLoading(false);
+    // Subscriptions
+    const unsubscribeSettings = onSnapshot(doc(db, 'settings', 'global'), (docSnap) => {
+      if (docSnap.exists()) {
+        setSettings(docSnap.data() as SiteSettings);
       }
-    };
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'settings/global');
+      setLoading(false);
+    });
 
-    fetchData();
+    const projectsQuery = query(collection(db, 'projects'), orderBy('order', 'asc'));
+    const unsubscribeProjects = onSnapshot(projectsQuery, (snapshot) => {
+      const projectsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+      setProjects(projectsData);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'projects');
+    });
 
-    // Set up real-time subscriptions
-    const settingsChannel = supabase.channel('settings_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: 'id=eq.global' }, payload => {
-        setSettings(payload.new as any);
-      }).subscribe();
-
-    const projectsChannel = supabase.channel('projects_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
-        supabase.from('projects').select('*').order('order', { ascending: true }).then(({ data }) => setProjects(data || []));
-      }).subscribe();
-
-    const expChannel = supabase.channel('exp_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'experience' }, () => {
-        supabase.from('experience').select('*').order('order', { ascending: true }).then(({ data }) => setExperiences(data || []));
-      }).subscribe();
+    const experienceQuery = query(collection(db, 'experience'), orderBy('order', 'asc'));
+    const unsubscribeExperience = onSnapshot(experienceQuery, (snapshot) => {
+      const expData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Experience));
+      setExperiences(expData);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'experience');
+    });
 
     return () => {
-      authListener.unsubscribe();
-      supabase.removeChannel(settingsChannel);
-      supabase.removeChannel(projectsChannel);
-      supabase.removeChannel(expChannel);
+      unsubscribeAuth();
+      unsubscribeSettings();
+      unsubscribeProjects();
+      unsubscribeExperience();
     };
   }, []);
 
   if (loading) return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8 overflow-hidden relative">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent pointer-events-none" />
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative z-10 flex flex-col items-center"
+      >
+        <Logo className="scale-150 mb-12 animate-pulse" />
+        <div className="w-12 h-[2px] bg-neutral-900 overflow-hidden rounded-full">
+          <motion.div 
+            initial={{ x: '-100%' }}
+            animate={{ x: '100%' }}
+            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+            className="w-full h-full bg-indigo-500"
+          />
+        </div>
+      </motion.div>
     </div>
   );
 
@@ -183,13 +184,24 @@ export default function App() {
     : projects.filter(p => p.type === activeTab);
 
   if (showAdmin && user) {
-    return <AdminDashboard 
-      user={user} 
-      onClose={() => setShowAdmin(false)} 
-      settings={siteData}
-      projects={projects}
-      experiences={experiences}
-    />;
+    return (
+      <Suspense fallback={
+        <div className="fixed inset-0 z-[100] bg-neutral-950 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <span className="text-[10px] uppercase font-bold tracking-widest text-neutral-500">Loading System...</span>
+          </div>
+        </div>
+      }>
+        <AdminDashboard 
+          user={user} 
+          onClose={() => setShowAdmin(false)} 
+          settings={siteData as any}
+          projects={projects as any}
+          experiences={experiences as any}
+        />
+      </Suspense>
+    );
   }
 
   return (
@@ -201,8 +213,8 @@ export default function App() {
 
       <nav className="fixed top-0 left-0 w-full z-50 bg-neutral-950/80 backdrop-blur-md border-b border-neutral-900">
         <div className="max-w-7xl mx-auto px-8 h-20 flex items-center justify-between">
-          <div className="text-neutral-100 font-black tracking-tighter text-2xl uppercase">
-            MH.Studio
+          <div className="flex items-center">
+            <Logo className="scale-75 origin-left" />
           </div>
           <div className="flex gap-12 items-center">
             <div className="hidden md:flex gap-12 text-xs font-bold uppercase tracking-[0.2em] opacity-60">
@@ -232,10 +244,7 @@ export default function App() {
       <main className="relative z-10 max-w-7xl mx-auto px-8 pt-32 pb-24">
         <section className="mb-32 grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="md:col-span-12 lg:col-span-7">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] uppercase font-bold tracking-widest text-neutral-300 mb-8">
-              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-              Developer & Marketing Specialist
-            </div>
+
             <h1 className="text-[60px] sm:text-[100px] lg:text-[140px] leading-[0.8] font-black text-neutral-100 uppercase tracking-tighter mb-10">
               {siteData.name} <br />
               <span className="text-neutral-800">{siteData.surname}</span>
@@ -368,201 +377,6 @@ export default function App() {
   );
 }
 
-function AdminDashboard({ user, onClose, settings, projects, experiences }: { 
-  user: SupabaseUser; 
-  onClose: () => void;
-  settings: SiteSettings;
-  projects: Project[];
-  experiences: Experience[];
-}) {
-  const [activeView, setActiveView] = useState<'settings' | 'projects' | 'experience'>('settings');
-  return (
-    <div className="fixed inset-0 z-[100] bg-neutral-950 text-white flex flex-col md:flex-row">
-      <aside className="w-full md:w-64 bg-neutral-900 border-r border-neutral-800 p-6 flex flex-col">
-        <div className="flex items-center justify-between mb-12">
-          <h2 className="text-xl font-black tracking-tighter uppercase">Admin Panel</h2>
-          <button onClick={onClose} className="md:hidden"><X className="w-6 h-6" /></button>
-        </div>
-        <nav className="flex flex-col gap-2 flex-grow">
-          <AdminNavItem active={activeView === 'settings'} onClick={() => setActiveView('settings')} icon={SettingsIcon} label="Settings" />
-          <AdminNavItem active={activeView === 'projects'} onClick={() => setActiveView('projects')} icon={Layers} label="Projects" />
-          <AdminNavItem active={activeView === 'experience'} onClick={() => setActiveView('experience')} icon={Briefcase} label="Experience" />
-        </nav>
-        <div className="mt-auto pt-6 border-t border-neutral-800">
-          <div className="text-[10px] uppercase font-bold text-neutral-600 mb-2 truncate">Logged in as {user.email}</div>
-          <button onClick={() => { supabase.auth.signOut(); onClose(); }} className="flex items-center gap-2 text-xs font-bold text-red-500 hover:text-red-400 transition-colors"><LogOut className="w-4 h-4" /> Sign Out</button>
-        </div>
-      </aside>
-      <main className="flex-grow overflow-y-auto p-4 md:p-12 pb-32">
-        <div className="max-w-4xl mx-auto relative">
-          <button onClick={onClose} className="hidden md:absolute -top-4 -right-12 p-4 text-neutral-500 hover:text-white"><X className="w-8 h-8" /></button>
-          {activeView === 'settings' && <SettingsEditor initialData={settings} />}
-          {activeView === 'projects' && <ProjectListEditor initialData={projects} />}
-          {activeView === 'experience' && <ExperienceListEditor initialData={experiences} />}
-        </div>
-      </main>
-    </div>
-  );
-}
-
-function AdminNavItem({ active, onClick, icon: Icon, label }: any) {
-  return (
-    <button onClick={onClick} className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all ${active ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-neutral-400 hover:bg-neutral-800 hover:text-white'}`}>
-      <Icon className="w-4 h-4" /> {label}
-    </button>
-  );
-}
-
-function SettingsEditor({ initialData }: { initialData: SiteSettings }) {
-  const [data, setData] = useState(initialData);
-  const [saving, setSaving] = useState(false);
-  const save = async () => {
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('settings')
-        .upsert({ id: 'global', ...data });
-      
-      if (error) throw error;
-      alert('Settings saved!');
-    } catch (err) { handleSupabaseError(err); }
-    finally { setSaving(false); }
-  };
-  return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div><h3 className="text-3xl font-black uppercase tracking-tighter mb-2">Global Settings</h3><p className="text-neutral-500 text-sm">Update basic info and hero section.</p></div>
-      <div className="grid gap-6">
-        <div className="grid grid-cols-2 gap-4"><AdminField label="First Name" value={data.name} onChange={v => setData({...data, name: v})} /><AdminField label="Surname" value={data.surname} onChange={v => setData({...data, surname: v})} /></div>
-        <AdminField label="Email" value={data.email} onChange={v => setData({...data, email: v})} />
-        <div className="flex flex-col gap-2"><label className="text-[10px] uppercase font-black text-neutral-600">Bio / About</label><textarea value={data.bio} onChange={e => setData({...data, bio: e.target.value})} className="w-full bg-neutral-900 border border-neutral-800 rounded-lg p-4 text-sm focus:outline-none focus:border-indigo-500 min-h-[150px]" /></div>
-        <AdminField label="Profile Image URL" value={data.profileImage} onChange={v => setData({...data, profileImage: v})} />
-        <div className="grid grid-cols-3 gap-4">
-          <AdminField label="Social Projects Stat" value={data.stats.socialProjects} onChange={v => setData({...data, stats: {...data.stats, socialProjects: v}})} />
-          <AdminField label="Web Apps Stat" value={data.stats.webApps} onChange={v => setData({...data, stats: {...data.stats, webApps: v}})} />
-          <AdminField label="Success Rate Stat" value={data.stats.successRate} onChange={v => setData({...data, stats: {...data.stats, successRate: v}})} />
-        </div>
-      </div>
-      <button onClick={save} disabled={saving} className="flex items-center gap-2 px-8 py-4 bg-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-full hover:bg-indigo-500 transition-all disabled:opacity-50"><Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Settings'}</button>
-    </div>
-  );
-}
-
-function ProjectListEditor({ initialData }: { initialData: Project[] }) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [isAdding, setIsAdding] = useState(false);
-  const deleteProject = async (id: string) => { 
-    if (confirm('Are you sure?')) { 
-      try { 
-        const { error } = await supabase.from('projects').delete().eq('id', id);
-        if (error) throw error;
-      } catch (err) { handleSupabaseError(err); } 
-    } 
-  };
-  return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between"><div><h3 className="text-3xl font-black uppercase tracking-tighter mb-2">Projects</h3><p className="text-neutral-500 text-sm">Manage your portfolio showcase.</p></div><button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-6 py-3 bg-white text-black font-black uppercase tracking-widest text-[10px] rounded-full"><Plus className="w-4 h-4" /> Add Project</button></div>
-      <div className="grid gap-4">{initialData.map(p => (<div key={p.id} className="flex items-center justify-between p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-neutral-700 transition-colors"><div className="flex items-center gap-4"><div className="w-12 h-12 rounded-lg overflow-hidden bg-neutral-800"><img src={p.image} className="w-full h-full object-cover" /></div><div><h4 className="font-bold text-neutral-100">{p.title}</h4><p className="text-xs text-neutral-500 uppercase font-black tracking-widest">{p.type}</p></div></div><div className="flex gap-2"><button onClick={() => setEditingId(p.id)} className="p-2 text-neutral-500 hover:text-white transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button><button onClick={() => deleteProject(p.id)} className="p-2 text-neutral-500 hover:text-red-500 transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button></div></div>))}</div>
-      {(editingId || isAdding) && <ProjectModal project={editingId ? initialData.find(p => p.id === editingId) || null : null} onClose={() => { setEditingId(null); setIsAdding(false); }} nextOrder={initialData.length} />}
-    </div>
-  );
-}
-
-function ProjectModal({ project, onClose, nextOrder }: { project: Project | null; onClose: () => void; nextOrder: number }) {
-  const [data, setData] = useState<Partial<Project>>(project || { title: '', description: '', tech: [], type: 'web', image: '', order: nextOrder, github: '', link: '' });
-  const [techInput, setTechInput] = useState(project?.tech.join(', ') || '');
-  const [saving, setSaving] = useState(false);
-  const save = async () => {
-    setSaving(true);
-    const id = project?.id || Math.random().toString(36).substr(2, 9);
-    const finalData = { ...data, id, tech: techInput.split(',').map(t => t.trim()).filter(Boolean) };
-    try { 
-      const { error } = await supabase.from('projects').upsert(finalData);
-      if (error) throw error;
-      onClose(); 
-    } catch (err) { handleSupabaseError(err); }
-    finally { setSaving(false); }
-  };
-  return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 p-4">
-      <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h4 className="text-2xl font-black uppercase tracking-tighter mb-6">{project ? 'Edit' : 'Add'} Project</h4>
-        <div className="grid gap-4">
-          <AdminField label="Title" value={data.title || ''} onChange={v => setData({...data, title: v})} />
-          <AdminField label="Description" value={data.description || ''} onChange={v => setData({...data, description: v})} />
-          <div className="grid grid-cols-2 gap-4">
-             <div className="flex flex-col gap-2"><label className="text-[10px] uppercase font-black text-neutral-600">Type</label><select value={data.type} onChange={e => setData({...data, type: e.target.value as any})} className="bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-xs"><option value="web">Web</option><option value="app">App</option><option value="other">Marketing/Other</option></select></div>
-            <AdminField label="Order" value={data.order?.toString() || '0'} onChange={v => setData({...data, order: parseInt(v)})} />
-          </div>
-          <AdminField label="Tech (comma separated)" value={techInput} onChange={setTechInput} />
-          <AdminField label="Image URL" value={data.image || ''} onChange={v => setData({...data, image: v})} />
-          <AdminField label="GitHub URL" value={data.github || ''} onChange={v => setData({...data, github: v})} />
-          <AdminField label="Live Link" value={data.link || ''} onChange={v => setData({...data, link: v})} />
-        </div>
-        <div className="flex gap-4 mt-8"><button onClick={save} disabled={saving} className="flex-grow py-4 bg-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-full">{saving ? 'Saving...' : 'Save'}</button><button onClick={onClose} className="px-8 py-4 bg-neutral-800 text-white font-black uppercase tracking-widest text-xs rounded-full">Cancel</button></div>
-      </div>
-    </div>
-  );
-}
-
-function ExperienceListEditor({ initialData }: { initialData: Experience[] }) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [isAdding, setIsAdding] = useState(false);
-  const deleteExp = async (id: string) => { 
-    if (confirm('Are you sure?')) { 
-      try { 
-        const { error } = await supabase.from('experience').delete().eq('id', id);
-        if (error) throw error;
-      } catch (err) { handleSupabaseError(err); } 
-    } 
-  };
-  return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between"><div><h3 className="text-3xl font-black uppercase tracking-tighter mb-2">Experience</h3><p className="text-neutral-500 text-sm">Manage career timeline.</p></div><button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-6 py-3 bg-white text-black font-black uppercase tracking-widest text-[10px] rounded-full"><Plus className="w-4 h-4" /> Add Experience</button></div>
-      <div className="grid gap-4">{initialData.map(e => (<div key={e.id} className="flex items-center justify-between p-6 bg-neutral-900 border border-neutral-800 rounded-xl"><div><h4 className="font-bold text-neutral-100">{e.role}</h4><p className="text-xs text-neutral-500 uppercase font-black tracking-widest">{e.company} | {e.period}</p></div><div className="flex gap-2"><button onClick={() => setEditingId(e.id)} className="p-2 text-neutral-500 hover:text-white"><Edit2 className="w-4 h-4" /></button><button onClick={() => deleteExp(e.id)} className="p-2 text-neutral-500 hover:text-red-500"><Trash2 className="w-4 h-4" /></button></div></div>))}</div>
-      {(editingId || isAdding) && <ExperienceModal exp={editingId ? initialData.find(e => e.id === editingId) || null : null} onClose={() => { setEditingId(null); setIsAdding(false); }} nextOrder={initialData.length} />}
-    </div>
-  );
-}
-
-function ExperienceModal({ exp, onClose, nextOrder }: { exp: Experience | null; onClose: () => void; nextOrder: number }) {
-  const [data, setData] = useState<Partial<Experience>>(exp || { company: '', role: '', period: '', description: '', order: nextOrder });
-  const [saving, setSaving] = useState(false);
-  const save = async () => {
-    setSaving(true);
-    const id = exp?.id || Math.random().toString(36).substr(2, 9);
-    const finalData = { ...data, id };
-    try { 
-      const { error } = await supabase.from('experience').upsert(finalData);
-      if (error) throw error;
-      onClose(); 
-    } catch (err) { handleSupabaseError(err); }
-    finally { setSaving(false); }
-  };
-  return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 p-4">
-      <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl w-full max-w-2xl">
-        <h4 className="text-2xl font-black uppercase tracking-tighter mb-6">{exp ? 'Edit' : 'Add'} Experience</h4>
-        <div className="grid gap-4">
-          <AdminField label="Role" value={data.role || ''} onChange={v => setData({...data, role: v})} />
-          <AdminField label="Company" value={data.company || ''} onChange={v => setData({...data, company: v})} />
-          <AdminField label="Period" value={data.period || ''} onChange={v => setData({...data, period: v})} />
-          <div className="flex flex-col gap-2"><label className="text-[10px] uppercase font-black text-neutral-600">Description</label><textarea value={data.description} onChange={e => setData({...data, description: e.target.value})} className="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-xs min-h-[100px]" /></div>
-          <AdminField label="Order" value={data.order?.toString() || '0'} onChange={v => setData({...data, order: parseInt(v)})} />
-        </div>
-        <div className="flex gap-4 mt-8"><button onClick={save} disabled={saving} className="flex-grow py-4 bg-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-full">{saving ? 'Saving...' : 'Save'}</button><button onClick={onClose} className="px-8 py-4 bg-neutral-800 text-white font-black uppercase tracking-widest text-xs rounded-full">Cancel</button></div>
-      </div>
-    </div>
-  );
-}
-
-function AdminField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <label className="text-[10px] uppercase font-black text-neutral-600 tracking-widest">{label}</label>
-      <input type="text" value={value} onChange={e => onChange(e.target.value)} className="w-full bg-neutral-900 border border-neutral-800 rounded-lg p-3 text-xs focus:outline-none focus:border-indigo-500" />
-    </div>
-  );
-}
 function LoginForm({ onCancel }: { onCancel: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -573,13 +387,7 @@ function LoginForm({ onCancel }: { onCancel: () => void }) {
     setLoading(true);
     setError('');
     try {
-      const { error } = await supabase.auth.signInWithOAuth({ 
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin
-        }
-      });
-      if (error) throw error;
+      await signIn();
     } catch (err: any) {
       setError(err.message || 'Google login failed.');
     } finally {
@@ -589,16 +397,7 @@ function LoginForm({ onCancel }: { onCancel: () => void }) {
 
   const loginWithEmail = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-    try { 
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-    } 
-    catch (err: any) { 
-      setError('Login failed. Please check your credentials or use Google Login.'); 
-    }
-    finally { setLoading(false); }
+    setError('Only Google Login is supported for admin access.');
   };
 
   return (
