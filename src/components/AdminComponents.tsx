@@ -41,6 +41,11 @@ interface SiteSettings {
   github?: string;
   linkedin?: string;
   twitter?: string;
+  stats: {
+    socialProjects: string;
+    webApps: string;
+    successRate: string;
+  };
 }
 
 interface Project {
@@ -50,7 +55,7 @@ interface Project {
   image: string;
   link: string;
   tech: string[];
-  category: 'web' | 'app' | 'other';
+  category: 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other';
   order: number;
 }
 
@@ -70,12 +75,13 @@ export function AdminDashboard({ user, onClose, settings, projects, experiences 
   projects: Project[];
   experiences: Experience[];
 }) {
-  const [activeTab, setActiveTab] = useState<'settings' | 'projects' | 'experience'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'projects' | 'experience' | 'stats'>('settings');
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [editingExp, setEditingExp] = useState<Experience | null>(null);
 
   const tabs = [
     { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'stats', label: 'Stats', icon: Monitor },
     { id: 'projects', label: 'Projects', icon: Layout },
     { id: 'experience', label: 'Experience', icon: Briefcase },
   ] as const;
@@ -124,6 +130,7 @@ export function AdminDashboard({ user, onClose, settings, projects, experiences 
           </div>
           
           {activeTab === 'settings' && <SettingsEditor settings={settings} />}
+          {activeTab === 'stats' && <StatsEditor settings={settings} projects={projects} />}
           {activeTab === 'projects' && <ProjectsManager projects={projects} onEdit={setEditingProject} />}
           {activeTab === 'experience' && <ExperienceManager experiences={experiences} onEdit={setEditingExp} />}
         </div>
@@ -139,11 +146,20 @@ function SettingsEditor({ settings }: { settings: SiteSettings }) {
   const [data, setData] = useState(settings);
   const [saving, setSaving] = useState(false);
 
-  const points = data.points || ['', '', ''];
+  const points = data.points || [];
 
   const updatePoint = (index: number, value: string) => {
     const newPoints = [...points];
     newPoints[index] = value;
+    setData({ ...data, points: newPoints });
+  };
+
+  const addPoint = () => {
+    setData({ ...data, points: [...points, ''] });
+  };
+
+  const removePoint = (index: number) => {
+    const newPoints = points.filter((_, i) => i !== index);
     setData({ ...data, points: newPoints });
   };
 
@@ -162,13 +178,41 @@ function SettingsEditor({ settings }: { settings: SiteSettings }) {
       <InputField label="Role" icon={Monitor} value={data.role} onChange={v => setData({...data, role: v})} />
       <InputField label="Email" icon={Type} value={data.email} onChange={v => setData({...data, email: v})} />
       
-      <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-neutral-800 pt-6 mt-2">
-        <div className="md:col-span-3">
-          <label className="block text-[10px] uppercase font-bold text-neutral-500 mb-2">Professional Highlights (3 Points)</label>
+      <div className="md:col-span-2 border-t border-neutral-800 pt-6 mt-2">
+        <div className="flex items-center justify-between mb-4">
+          <label className="block text-[10px] uppercase font-bold text-neutral-500">Professional Highlights</label>
+          <button 
+            onClick={addPoint}
+            className="flex items-center gap-1 text-[10px] uppercase font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
+          >
+            <Plus className="w-3 h-3" /> Add Point
+          </button>
         </div>
-        <InputField label="Point 1" icon={Plus} value={points[0]} onChange={v => updatePoint(0, v)} placeholder="e.g. Building robust web architectures..." />
-        <InputField label="Point 2" icon={Plus} value={points[1]} onChange={v => updatePoint(1, v)} placeholder="e.g. Crafting visual identities..." />
-        <InputField label="Point 3" icon={Plus} value={points[2]} onChange={v => updatePoint(2, v)} placeholder="e.g. Turning complex problems..." />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {points.map((point, index) => (
+            <div key={index} className="relative group">
+              <InputField 
+                label={`Point ${index + 1}`} 
+                icon={Plus} 
+                value={point} 
+                onChange={(v: string) => updatePoint(index, v)} 
+                placeholder="e.g. Building robust web architectures..." 
+              />
+              <button 
+                onClick={() => removePoint(index)}
+                className="absolute right-2 top-8 p-2 text-neutral-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                title="Remove Point"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+          {points.length === 0 && (
+            <div className="md:col-span-2 py-8 border-2 border-dashed border-neutral-800 rounded-2xl flex flex-col items-center justify-center text-neutral-600 italic text-sm">
+              No highlights added yet.
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="md:col-span-2 pt-6 border-t border-neutral-800 mt-2">
@@ -236,7 +280,10 @@ function ProjectModal({ project, onClose }: { project: Project, onClose: () => v
             <label className="block text-[10px] uppercase font-bold text-neutral-500 mb-2">Category</label>
             <select value={data.category} onChange={e => setData({...data, category: e.target.value as any})} className="w-full bg-neutral-800/50 border border-neutral-700 rounded-xl p-4 text-white text-sm outline-none">
               <option value="web">Web</option>
-              <option value="app">Mobile App</option>
+              <option value="app">App</option>
+              <option value="graphic">Graphic Design</option>
+              <option value="digital">Digital Marketing</option>
+              <option value="cpa">CPA Marketing</option>
               <option value="other">Other</option>
             </select>
           </div>
@@ -307,6 +354,56 @@ function ExperienceModal({ exp, onClose }: { exp: Experience, onClose: () => voi
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatsEditor({ settings, projects }: { settings: SiteSettings, projects: Project[] }) {
+  const [data, setData] = useState(settings.stats);
+  const [saving, setSaving] = useState(false);
+
+  const sync = () => {
+    const webApps = projects.filter(p => p.category === 'web' || p.category === 'app').length;
+    setData({
+      ...data,
+      webApps: `${webApps}+`,
+      socialProjects: `${projects.length}+`
+    });
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await setDoc(doc(db, 'settings', 'global'), { ...settings, stats: data });
+      alert('Stats updated!');
+    } catch (err) { handleFirestoreError(err, OperationType.WRITE, 'settings/global'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="bg-neutral-900/30 p-8 rounded-3xl border border-neutral-800">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h3 className="text-xl font-bold text-white mb-1">Site Statistics</h3>
+          <p className="text-xs text-neutral-500 uppercase tracking-widest">Manage your public metrics</p>
+        </div>
+        <button 
+          onClick={sync}
+          className="text-[10px] uppercase font-black text-indigo-400 hover:text-indigo-300 transition-colors border border-indigo-400/20 px-4 py-2 rounded-lg hover:bg-indigo-400/5"
+        >
+          Sync with Portfolio
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <InputField label="Social Projects" icon={Layout} value={data.socialProjects} onChange={(v: string) => setData({...data, socialProjects: v})} />
+        <InputField label="Web Apps" icon={Monitor} value={data.webApps} onChange={(v: string) => setData({...data, webApps: v})} />
+        <InputField label="Success Rate" icon={Type} value={data.successRate} onChange={(v: string) => setData({...data, successRate: v})} />
+      </div>
+
+      <button onClick={save} disabled={saving} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+        <Save className="w-5 h-5" /> {saving ? 'SAVING...' : 'SAVE STATS'}
+      </button>
     </div>
   );
 }

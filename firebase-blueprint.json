@@ -36,7 +36,7 @@
         "tech": { "type": "array", "items": { "type": "string" } },
         "link": { "type": "string" },
         "github": { "type": "string" },
-        "type": { "type": "string", "enum": ["web", "app", "other"] },
+        "type": { "type": "string", "enum": ["web", "app", "graphic", "digital", "cpa", "other"] },
         "image": { "type": "string" },
         "order": { "type": "number" }
       },

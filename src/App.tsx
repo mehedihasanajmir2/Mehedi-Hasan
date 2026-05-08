@@ -73,7 +73,7 @@ interface Project {
   tech: string[];
   link?: string;
   github?: string;
-  type: 'web' | 'app' | 'other';
+  type: 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other';
   image: string;
   order: number;
 }
@@ -103,6 +103,57 @@ function Section({ title, id, children, icon: Icon }: { title: string; id: strin
   );
 }
 
+function Counter({ value }: { value: string }) {
+  const [count, setCount] = useState(0);
+  const nodeRef = useRef<HTMLDivElement>(null);
+  const isInView = useRef(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isInView.current) {
+          isInView.current = true;
+          startAnimation();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (nodeRef.current) observer.observe(nodeRef.current);
+    return () => observer.disconnect();
+  }, [value]);
+
+  const startAnimation = () => {
+    const target = parseInt(value) || 0;
+    const duration = 2000; // 2 seconds
+    const start = 0;
+    const startTime = performance.now();
+
+    const update = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 4); // Quart ease out
+      
+      const current = Math.floor(start + (target - start) * eased);
+      setCount(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(update);
+      }
+    };
+
+    requestAnimationFrame(update);
+  };
+
+  const suffix = value.replace(/[0-9]/g, '');
+
+  return (
+    <div ref={nodeRef} className="text-4xl lg:text-5xl font-black mb-1 italic text-indigo-500 tracking-tighter">
+      {count}{suffix}
+    </div>
+  );
+}
+
 export default function App() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -115,7 +166,7 @@ export default function App() {
   const [loginStep, setLoginStep] = useState<'pin' | 'login'>('pin');
   const [logoClicks, setLogoClicks] = useState(0);
   const [lastClickTime, setLastClickTime] = useState(0);
-  const [activeTab, setActiveTab] = useState<'all' | 'web' | 'app' | 'other'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other'>('all');
 
   // Disable scrolling when PIN modal is open
   useEffect(() => {
@@ -193,10 +244,10 @@ export default function App() {
 
   // Removed blocking global loading screen for instant feel
   
-  const siteData = settings || {
+  const defaults: SiteSettings = {
     name: 'Mehedi',
     surname: 'Hasan',
-    role: 'Full-Stack Developer | Digital Marketer | Creative Designer',
+    role: 'Full-Stack Developer | Digital Marketer | CPA Marketer | Creative Designer',
     bio: 'Building robust web architectures and scaling businesses through creative design and strategic marketing.',
     profileImage: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhsH3QzxWYJ-ILrnEjlNRNRuiKnkL06aNaPkLjPOInRW1EKGt_3U6Ug8W9Cbmi7Tg9IA6fj47XHAVkjWFJJswRc1m2DhwwycS6f3ZK6-9YZylwfMDs8ea4uCJlDQ2iURDiOkumcsbxrKWOfpLpxdFay6t_yQ0GU38s3-GA4KBedaO3FKaDec_tHVxYvma30/s1332/Gemini_Generated_Image_cohv0rcohv0rcohv.png',
     email: 'mehedihasanajmir2@gmail.com',
@@ -207,6 +258,13 @@ export default function App() {
     ],
     stats: { socialProjects: '50+', webApps: '25+', successRate: '100%' }
   };
+
+  const siteData: SiteSettings = settings ? {
+    ...defaults,
+    ...settings,
+    stats: { ...defaults.stats, ...settings.stats },
+    points: (settings.points && settings.points.some(p => p.trim() !== '')) ? settings.points : defaults.points
+  } : defaults;
 
   const filteredProjects = activeTab === 'all' 
     ? projects 
@@ -250,18 +308,45 @@ export default function App() {
         <section className="mb-32 grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="md:col-span-12 lg:col-span-7">
 
-            <h2 className="text-xs uppercase tracking-[0.4em] font-black text-indigo-500 mb-6 border-l-2 border-indigo-500 pl-4">{siteData.role}</h2>
             <h1 className="text-[60px] sm:text-[100px] lg:text-[140px] leading-[0.8] font-black text-neutral-100 uppercase tracking-tighter mb-10">
               {siteData.name} <br />
               <span className="text-neutral-800">{siteData.surname}</span>
             </h1>
+
+            {/* Desktop Role - Visible under name on LG screens */}
+            <h2 className="hidden lg:block text-xs uppercase tracking-[0.4em] font-black text-indigo-500 mb-12 border-l-2 border-indigo-500 pl-4">
+              {siteData.role}
+            </h2>
+
+            {/* Mobile View: Photo then Role */}
+            <div className="lg:hidden w-full">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3 }}
+                className="mb-8 relative aspect-[1332/710] bg-neutral-900 overflow-hidden border border-neutral-800 rounded-3xl"
+              >
+                <img src={siteData.profileImage} className="w-full h-full object-cover" />
+              </motion.div>
+              
+              <h2 className="text-xs uppercase tracking-[0.3em] font-black text-indigo-500 mb-12 border-l-2 border-indigo-500 pl-4 leading-relaxed">
+                {siteData.role}
+              </h2>
+            </div>
+
             <div className="space-y-6 max-w-xl">
               {siteData.points && siteData.points.map((point, index) => (
                 <motion.p 
                   key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 + index * 0.2 }}
+                  initial={{ opacity: 0, x: -100 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ 
+                    duration: 1, 
+                    delay: index * 0.4,
+                    type: "spring",
+                    stiffness: 50
+                  }}
                   className="text-lg md:text-xl font-light text-neutral-400 leading-snug border-l border-neutral-900 pl-6 hover:border-indigo-500 transition-colors"
                 >
                   {point}
@@ -271,21 +356,21 @@ export default function App() {
           </motion.div>
 
           <div className="md:col-span-12 lg:col-span-5 grid grid-cols-1 gap-12">
-            <div className="relative aspect-[1332/710] bg-neutral-900 overflow-hidden border border-neutral-800 rounded-3xl">
+            <div className="hidden lg:block relative aspect-[1332/710] bg-neutral-900 overflow-hidden border border-neutral-800 rounded-3xl">
               <img src={siteData.profileImage} className="w-full h-full object-cover" />
             </div>
 
             <div className="flex flex-row flex-wrap gap-12 border-t border-neutral-900 pt-8">
                <div>
-                <div className="text-4xl lg:text-5xl font-black mb-1 italic text-indigo-500 tracking-tighter">{siteData.stats.socialProjects}</div>
+                <Counter value={siteData.stats.socialProjects} />
                 <div className="text-[10px] uppercase tracking-widest font-bold opacity-50">Social Projects</div>
               </div>
               <div>
-                <div className="text-4xl lg:text-5xl font-black mb-1 italic text-indigo-500 tracking-tighter">{siteData.stats.webApps}</div>
+                <Counter value={siteData.stats.webApps} />
                 <div className="text-[10px] uppercase tracking-widest font-bold opacity-50">Web Apps</div>
               </div>
               <div>
-                <div className="text-4xl lg:text-5xl font-black mb-1 italic text-indigo-500 tracking-tighter">{siteData.stats.successRate}</div>
+                <Counter value={siteData.stats.successRate} />
                 <div className="text-[10px] uppercase tracking-widest font-bold opacity-50">Success</div>
               </div>
             </div>
@@ -298,10 +383,19 @@ export default function App() {
               <h2 className="text-xs uppercase tracking-[0.4em] font-black text-neutral-600 mb-4">Portfolio</h2>
               <h3 className="text-4xl font-black uppercase tracking-tighter text-neutral-100">Featured Work</h3>
             </div>
-            <div className="flex gap-4 border-b border-neutral-900 pb-2 overflow-x-auto whitespace-nowrap">
-              {(['all', 'web', 'app', 'other'] as const).map((tab) => (
-                <button key={tab} onClick={() => setActiveTab(tab)} className={`text-[10px] uppercase tracking-widest font-black px-4 py-2 transition-all relative ${activeTab === tab ? 'text-indigo-500' : 'text-neutral-600 hover:text-neutral-300'}`}>
-                  {tab === 'other' ? 'Marketing & Design' : tab}
+            <div className="flex gap-2 md:gap-4 border-b border-neutral-900 pb-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
+              {(['all', 'web', 'app', 'graphic', 'digital', 'cpa'] as const).map((tab) => (
+                <button 
+                  key={tab} 
+                  onClick={() => setActiveTab(tab)} 
+                  className={`text-[9px] md:text-[10px] uppercase tracking-widest font-black px-3 md:px-4 py-2 transition-all relative ${activeTab === tab ? 'text-indigo-500' : 'text-neutral-600 hover:text-neutral-300'}`}
+                >
+                  {tab === 'all' && 'All'}
+                  {tab === 'web' && 'Web'}
+                  {tab === 'app' && 'App'}
+                  {tab === 'graphic' && 'Graphic Design'}
+                  {tab === 'digital' && 'Digital Marketing'}
+                  {tab === 'cpa' && 'CPA Marketing'}
                   {activeTab === tab && <motion.div layoutId="tab-underline" className="absolute bottom-[-9px] left-0 right-0 h-[2px] bg-indigo-500" />}
                 </button>
               ))}
