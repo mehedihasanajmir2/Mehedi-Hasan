@@ -13,7 +13,11 @@ import {
   Calendar,
   Save,
   Monitor,
-  Layout
+  Layout,
+  Smartphone,
+  Palette,
+  Share2,
+  Zap,
 } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
 import { 
@@ -54,9 +58,12 @@ interface Project {
   description: string;
   image: string;
   link: string;
-  tech: string[];
-  category: 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other';
+  type: 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other';
   order: number;
+  dateReceived?: string;
+  completionTime?: string;
+  downloadUrl?: string;
+  downloadFileName?: string;
 }
 
 interface Experience {
@@ -68,22 +75,34 @@ interface Experience {
   order: number;
 }
 
-export function AdminDashboard({ user, onClose, settings, projects, experiences }: { 
+interface Blog {
+  id: string;
+  title: string;
+  content: string;
+  image: string;
+  date: string;
+  order: number;
+}
+
+export function AdminDashboard({ user, onClose, settings, projects, experiences, blogs }: { 
   user: FirebaseUser; 
   onClose: () => void;
   settings: SiteSettings;
   projects: Project[];
   experiences: Experience[];
+  blogs: Blog[];
 }) {
-  const [activeTab, setActiveTab] = useState<'settings' | 'projects' | 'experience' | 'stats'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'projects' | 'experience' | 'stats' | 'blogs'>('settings');
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [editingExp, setEditingExp] = useState<Experience | null>(null);
+  const [editingBlog, setEditingBlog] = useState<Blog | null>(null);
 
   const tabs = [
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'stats', label: 'Stats', icon: Monitor },
     { id: 'projects', label: 'Projects', icon: Layout },
     { id: 'experience', label: 'Experience', icon: Briefcase },
+    { id: 'blogs', label: 'Blogs & Gallery', icon: ImageIcon },
   ] as const;
 
   return (
@@ -123,7 +142,6 @@ export function AdminDashboard({ user, onClose, settings, projects, experiences 
           <div className="flex items-center justify-between mb-12">
             <h2 className="text-3xl font-black text-white uppercase tracking-tight">{activeTab}</h2>
             <div className="flex gap-2">
-              {activeTab === 'projects' && <button onClick={() => setEditingProject({ id: '', title: '', description: '', image: '', link: '', tech: [], category: 'web', order: projects.length })} className="bg-white text-black px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-neutral-200 transition-colors"><Plus className="w-4 h-4" /> Add Project</button>}
               {activeTab === 'experience' && <button onClick={() => setEditingExp({ id: '', company: '', role: '', period: '', description: '', order: experiences.length })} className="bg-white text-black px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-neutral-200 transition-colors"><Plus className="w-4 h-4" /> Add Exp</button>}
               <button onClick={onClose} className="hidden md:flex items-center gap-2 bg-neutral-800 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-neutral-700 transition-colors"><X className="w-4 h-4" /> Close</button>
             </div>
@@ -133,11 +151,13 @@ export function AdminDashboard({ user, onClose, settings, projects, experiences 
           {activeTab === 'stats' && <StatsEditor settings={settings} projects={projects} />}
           {activeTab === 'projects' && <ProjectsManager projects={projects} onEdit={setEditingProject} />}
           {activeTab === 'experience' && <ExperienceManager experiences={experiences} onEdit={setEditingExp} />}
+          {activeTab === 'blogs' && <BlogsManager blogs={blogs} onEdit={setEditingBlog} />}
         </div>
       </main>
 
       {editingProject && <ProjectModal project={editingProject} onClose={() => setEditingProject(null)} />}
       {editingExp && <ExperienceModal exp={editingExp} onClose={() => setEditingExp(null)} />}
+      {editingBlog && <BlogModal blog={editingBlog} onClose={() => setEditingBlog(null)} />}
     </div>
   );
 }
@@ -227,6 +247,8 @@ function SettingsEditor({ settings }: { settings: SiteSettings }) {
 }
 
 function ProjectsManager({ projects, onEdit }: { projects: Project[], onEdit: (p: Project) => void }) {
+  const [activeFilter, setActiveFilter] = useState<'all' | 'web' | 'app' | 'graphic' | 'digital' | 'cpa'>('all');
+
   const deleteProject = async (id: string) => { 
     if (confirm('Are you sure?')) { 
       try { 
@@ -234,62 +256,210 @@ function ProjectsManager({ projects, onEdit }: { projects: Project[], onEdit: (p
       } catch (err) { handleFirestoreError(err, OperationType.DELETE, `projects/${id}`); } 
     } 
   };
+
+  const filtered = projects
+    .filter(p => activeFilter === 'all' || p.type === activeFilter)
+    .sort((a, b) => (b.order || 0) - (a.order || 0));
+
+  const tabs = [
+    { id: 'all', label: 'All', icon: Layout },
+    { id: 'web', label: 'Web', icon: Monitor },
+    { id: 'app', label: 'App', icon: Smartphone },
+    { id: 'graphic', label: 'Graphic', icon: Palette },
+    { id: 'digital', label: 'Digital', icon: Share2 },
+    { id: 'cpa', label: 'CPA', icon: Zap },
+  ] as const;
+
   return (
-    <div className="grid gap-4">
-      {projects.map(p => (
-        <div key={p.id} className="flex items-center gap-6 bg-neutral-900/30 p-4 rounded-2xl border border-neutral-800 group">
-          <img src={p.image} className="w-20 h-20 rounded-xl object-cover" alt="" />
-          <div className="flex-grow">
-            <h4 className="font-bold text-white">{p.title}</h4>
-            <p className="text-xs text-neutral-500 uppercase tracking-widest">{p.category}</p>
+    <div className="space-y-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {tabs.map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveFilter(tab.id)}
+              className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all ${
+                activeFilter === tab.id 
+                ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/20' 
+                : 'bg-neutral-900/50 border-neutral-800 text-neutral-500 hover:border-neutral-700 hover:text-neutral-300'
+              }`}
+            >
+              <Icon className={`w-5 h-5 ${activeFilter === tab.id ? 'text-white' : 'text-neutral-600'}`} />
+              <span className="text-[10px] uppercase font-black tracking-widest">{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
+        <h3 className="text-sm uppercase font-black tracking-widest text-neutral-400">
+          Showing: <span className="text-white">{activeFilter}</span>
+        </h3>
+        {activeFilter !== 'all' && (
+          <button 
+            onClick={() => onEdit({ 
+              id: '', 
+              title: '', 
+              description: '', 
+              image: '', 
+              link: '', 
+              type: activeFilter, 
+              order: projects.length,
+              dateReceived: '',
+              completionTime: ''
+            })} 
+            className="bg-white text-black px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-neutral-200 transition-all active:scale-95"
+          >
+            <Plus className="w-4 h-4" /> Add {activeFilter} Project
+          </button>
+        )}
+      </div>
+
+      <div className="grid gap-4">
+        {filtered.map(p => (
+          <div key={p.id} className="flex items-center gap-6 bg-neutral-900/30 p-4 rounded-2xl border border-neutral-800 group">
+            <img src={p.image} className="w-20 h-20 rounded-xl object-cover" alt="" />
+            <div className="flex-grow">
+              <h4 className="font-bold text-white">{p.title}</h4>
+              <span className="text-[10px] uppercase font-bold text-indigo-500">{p.type}</span>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => onEdit(p)} className="p-3 bg-neutral-800 rounded-xl hover:bg-neutral-700 transition-colors"><Settings className="w-4 h-4 text-neutral-400" /></button>
+              <button onClick={() => deleteProject(p.id)} className="p-3 bg-red-900/20 rounded-xl hover:bg-red-900/40 transition-colors"><Trash2 className="w-4 h-4 text-red-500" /></button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => onEdit(p)} className="p-3 bg-neutral-800 rounded-xl hover:bg-neutral-700 transition-colors"><Settings className="w-4 h-4 text-neutral-400" /></button>
-            <button onClick={() => deleteProject(p.id)} className="p-3 bg-red-900/20 rounded-xl hover:bg-red-900/40 transition-colors"><Trash2 className="w-4 h-4 text-red-500" /></button>
+        ))}
+        {filtered.length === 0 && (
+          <div className="py-20 text-center text-neutral-600 italic">
+            No projects found in this category.
           </div>
-        </div>
-      ))}
+        )}
+      </div>
     </div>
   );
 }
 
 function ProjectModal({ project, onClose }: { project: Project, onClose: () => void }) {
   const [data, setData] = useState(project);
-  const [techInput, setTechInput] = useState(project.tech.join(', '));
   const [saving, setSaving] = useState(false);
+  const [fileName, setFileName] = useState('');
+  const [appFileName, setAppFileName] = useState(project.downloadFileName || '');
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setData({ ...data, image: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAppUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAppFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setData({ 
+          ...data, 
+          downloadUrl: reader.result as string, 
+          downloadFileName: file.name 
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const save = async () => {
+    if (!data.title || !data.image || !data.description) {
+      alert('Please fill in Name, Image and Description');
+      return;
+    }
     setSaving(true);
     const id = project?.id || Math.random().toString(36).substr(2, 9);
-    const finalData = { ...data, id, tech: techInput.split(',').map(t => t.trim()).filter(Boolean) };
     try { 
-      await setDoc(doc(db, 'projects', id), finalData);
+      await setDoc(doc(db, 'projects', id), { ...data, id });
       onClose(); 
     } catch (err) { handleFirestoreError(err, OperationType.WRITE, `projects/${id}`); }
     finally { setSaving(false); }
   };
+
+  const titleLabel = data.type === 'app' ? 'App Name' : 'Title';
+
   return (
     <div className="fixed inset-0 z-[110] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-neutral-900 w-full max-w-xl rounded-3xl p-8 border border-neutral-800 max-h-[90vh] overflow-y-auto">
-        <h3 className="text-2xl font-black text-white mb-8 border-b border-neutral-800 pb-4">PROJECT DETAILS</h3>
+      <div className="bg-neutral-900 w-full max-w-xl rounded-3xl p-8 border border-neutral-800 max-h-[90vh] overflow-y-auto scrollbar-hide">
+        <h3 className="text-2xl font-black text-white mb-8 border-b border-neutral-800 pb-4 uppercase tracking-tighter">Project Details</h3>
         <div className="space-y-6">
-          <InputField label="Title" value={data.title} onChange={v => setData({...data, title: v})} icon={Type} />
-          <InputField label="Image URL" value={data.image} onChange={v => setData({...data, image: v})} icon={ImageIcon} />
-          <InputField label="Live Link" value={data.link} onChange={v => setData({...data, link: v})} icon={LinkIcon} />
-          <InputField label="Tech Stack (comma separated)" value={techInput} onChange={setTechInput} icon={Layout} />
+          <InputField label={titleLabel} value={data.title} onChange={(v: string) => setData({...data, title: v})} icon={Type} />
+          
           <div>
-            <label className="block text-[10px] uppercase font-bold text-neutral-500 mb-2">Category</label>
-            <select value={data.category} onChange={e => setData({...data, category: e.target.value as any})} className="w-full bg-neutral-800/50 border border-neutral-700 rounded-xl p-4 text-white text-sm outline-none">
-              <option value="web">Web</option>
-              <option value="app">App</option>
-              <option value="graphic">Graphic Design</option>
-              <option value="digital">Digital Marketing</option>
-              <option value="cpa">CPA Marketing</option>
-              <option value="other">Other</option>
-            </select>
+            <label className="block text-[10px] uppercase font-bold text-neutral-500 mb-2">Project Image</label>
+            <div className="relative">
+              <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+              <div className="w-full bg-neutral-800/50 border border-neutral-700 rounded-xl py-4 pl-12 pr-4 text-white text-sm flex items-center justify-between">
+                <span className="truncate opacity-60 italic">{fileName || 'Choose image file...'}</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleFileChange} 
+                  className="absolute inset-0 opacity-0 cursor-pointer" 
+                />
+              </div>
+            </div>
+            {data.image && (
+              <div className="mt-4 aspect-video rounded-xl overflow-hidden border border-neutral-800">
+                <img src={data.image} alt="Preview" className="w-full h-full object-cover" />
+              </div>
+            )}
           </div>
-          <div className="flex gap-4">
+
+          <InputField label="Live Link" value={data.link} onChange={(v: string) => setData({...data, link: v})} icon={LinkIcon} />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InputField label="Date Received" value={data.dateReceived || ''} onChange={(v: string) => setData({...data, dateReceived: v})} icon={Calendar} placeholder="e.g. 15th May 2024" />
+            <InputField label="Completion Period" value={data.completionTime || ''} onChange={(v: string) => setData({...data, completionTime: v})} icon={Briefcase} placeholder="e.g. 3 Weeks" />
+          </div>
+
+          {data.type === 'app' && (
+            <div className="bg-indigo-500/5 border border-indigo-500/20 p-6 rounded-2xl">
+              <label className="block text-[10px] uppercase font-bold text-indigo-400 mb-2">Upload App File (APK/ZIP)</label>
+              <div className="relative">
+                <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
+                <div className="w-full bg-neutral-800/80 border border-indigo-500/30 rounded-xl py-4 pl-12 pr-4 text-white text-sm flex items-center justify-between">
+                  <span className="truncate opacity-60 italic">{appFileName || 'Upload application file...'}</span>
+                  <input 
+                    type="file" 
+                    onChange={handleAppUpload} 
+                    className="absolute inset-0 opacity-0 cursor-pointer" 
+                  />
+                </div>
+              </div>
+              {data.downloadUrl && (
+                <p className="mt-2 text-[9px] text-indigo-400/60 uppercase font-bold">File ready for download</p>
+              )}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-[10px] uppercase font-bold text-neutral-500 mb-2">Description</label>
+            <textarea 
+              value={data.description} 
+              onChange={e => setData({...data, description: e.target.value})} 
+              placeholder="Describe the project objective, process and outcome..."
+              className="w-full bg-neutral-800/50 border border-neutral-700 rounded-xl p-4 text-white text-sm focus:border-indigo-500 outline-none transition-colors h-32" 
+            />
+          </div>
+
+          <div className="flex gap-4 pt-4">
             <button onClick={onClose} className="flex-grow bg-neutral-800 text-white font-bold py-4 rounded-xl hover:bg-neutral-700 transition-all uppercase tracking-widest text-xs">Cancel</button>
-            <button onClick={save} disabled={saving} className="flex-grow bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-500 transition-all uppercase tracking-widest text-xs disabled:opacity-50 flex items-center justify-center gap-2"><Save className="w-4 h-4" /> {saving ? 'SAVING...' : 'SAVE PROJECT'}</button>
+            <button onClick={save} disabled={saving} className="flex-grow bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-500 transition-all uppercase tracking-widest text-xs disabled:opacity-50 flex items-center justify-center gap-2">
+              <Save className="w-4 h-4" /> {saving ? 'SAVING...' : 'SAVE PROJECT'}
+            </button>
           </div>
         </div>
       </div>
@@ -363,11 +533,13 @@ function StatsEditor({ settings, projects }: { settings: SiteSettings, projects:
   const [saving, setSaving] = useState(false);
 
   const sync = () => {
-    const webApps = projects.filter(p => p.category === 'web' || p.category === 'app').length;
+    const webApps = projects.filter(p => p.type === 'web' || p.type === 'app').length;
+    const socialProjects = projects.filter(p => p.type === 'graphic' || p.type === 'digital' || p.type === 'cpa').length;
+    
     setData({
       ...data,
       webApps: `${webApps}+`,
-      socialProjects: `${projects.length}+`
+      socialProjects: `${socialProjects}+`
     });
   };
 
@@ -421,6 +593,128 @@ function InputField({ label, icon: Icon, value, onChange, placeholder }: any) {
           placeholder={placeholder}
           className="w-full bg-neutral-800/50 border border-neutral-700 rounded-xl py-4 pl-12 pr-4 text-white text-sm focus:border-indigo-500 outline-none transition-colors"
         />
+      </div>
+    </div>
+  );
+}
+
+function BlogsManager({ blogs, onEdit }: { blogs: Blog[], onEdit: (b: Blog) => void }) {
+  const deleteBlog = async (id: string) => { 
+    if (confirm('Delete this post?')) { 
+      try { 
+        await deleteDoc(doc(db, 'blogs', id)); 
+      } catch (err) { handleFirestoreError(err, OperationType.DELETE, `blogs/${id}`); } 
+    } 
+  };
+  
+  const sorted = [...blogs].sort((a, b) => b.order - a.order);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-end">
+        <button 
+          onClick={() => onEdit({ id: '', title: '', content: '', image: '', date: new Date().toLocaleDateString(), order: blogs.length })} 
+          className="bg-white text-black px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-neutral-200 transition-all active:scale-95"
+        >
+          <Plus className="w-4 h-4" /> Add Blog Post
+        </button>
+      </div>
+
+      <div className="grid gap-4">
+        {sorted.map(b => (
+          <div key={b.id} className="flex items-center gap-6 bg-neutral-900/30 p-4 rounded-2xl border border-neutral-800 group">
+            <img src={b.image} className="w-20 h-20 rounded-xl object-cover" alt="" />
+            <div className="flex-grow">
+              <h4 className="font-bold text-white">{b.title}</h4>
+              <span className="text-[10px] uppercase font-bold text-neutral-500">{b.date}</span>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => onEdit(b)} className="p-3 bg-neutral-800 rounded-xl hover:bg-neutral-700 transition-colors"><Settings className="w-4 h-4 text-neutral-400" /></button>
+              <button onClick={() => deleteBlog(b.id)} className="p-3 bg-red-900/20 rounded-xl hover:bg-red-900/40 transition-colors"><Trash2 className="w-4 h-4 text-red-500" /></button>
+            </div>
+          </div>
+        ))}
+        {sorted.length === 0 && (
+          <div className="py-20 text-center text-neutral-600 italic">No posts yet.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BlogModal({ blog, onClose }: { blog: Blog, onClose: () => void }) {
+  const [data, setData] = useState(blog);
+  const [saving, setSaving] = useState(false);
+  const [fileName, setFileName] = useState('');
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setData({ ...data, image: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const save = async () => {
+    if (!data.title || !data.image || !data.content) {
+      alert('Please fill in Title, Image and Content');
+      return;
+    }
+    setSaving(true);
+    const id = blog?.id || Math.random().toString(36).substr(2, 9);
+    try { 
+      await setDoc(doc(db, 'blogs', id), { ...data, id });
+      onClose(); 
+    } catch (err) { handleFirestoreError(err, OperationType.WRITE, `blogs/${id}`); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[110] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="bg-neutral-900 w-full max-w-xl rounded-3xl p-8 border border-neutral-800 max-h-[90vh] overflow-y-auto scrollbar-hide">
+        <h3 className="text-2xl font-black text-white mb-8 border-b border-neutral-800 pb-4 uppercase tracking-tighter">Blog Entry</h3>
+        <div className="space-y-6">
+          <InputField label="Title" value={data.title} onChange={(v: string) => setData({...data, title: v})} icon={Type} />
+          
+          <div>
+            <label className="block text-[10px] uppercase font-bold text-neutral-500 mb-2">Featured Image</label>
+            <div className="relative">
+              <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+              <div className="w-full bg-neutral-800/50 border border-neutral-700 rounded-xl py-4 pl-12 pr-4 text-white text-sm flex items-center justify-between">
+                <span className="truncate opacity-60 italic">{fileName || 'Choose image file...'}</span>
+                <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+              </div>
+            </div>
+            {data.image && (
+              <div className="mt-4 aspect-video rounded-xl overflow-hidden border border-neutral-800">
+                <img src={data.image} alt="Preview" className="w-full h-full object-cover" />
+              </div>
+            )}
+          </div>
+
+          <InputField label="Date" value={data.date} onChange={(v: string) => setData({...data, date: v})} icon={Calendar} />
+
+          <div>
+            <label className="block text-[10px] uppercase font-bold text-neutral-500 mb-2">Blog Content / Thoughts</label>
+            <textarea 
+              value={data.content} 
+              onChange={e => setData({...data, content: e.target.value})} 
+              placeholder="What's on your mind?..."
+              className="w-full bg-neutral-800/50 border border-neutral-700 rounded-xl p-4 text-white text-sm focus:border-indigo-500 outline-none transition-colors h-32" 
+            />
+          </div>
+
+          <div className="flex gap-4 pt-4">
+            <button onClick={onClose} className="flex-grow bg-neutral-800 text-white font-bold py-4 rounded-xl hover:bg-neutral-700 transition-all uppercase tracking-widest text-xs">Cancel</button>
+            <button onClick={save} disabled={saving} className="flex-grow bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-500 transition-all uppercase tracking-widest text-xs disabled:opacity-50 flex items-center justify-center gap-2">
+              <Save className="w-4 h-4" /> {saving ? 'SAVING...' : 'SAVE POST'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

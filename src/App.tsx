@@ -70,11 +70,23 @@ interface Project {
   id: string;
   title: string;
   description: string;
-  tech: string[];
   link?: string;
   github?: string;
   type: 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other';
   image: string;
+  order: number;
+  dateReceived?: string;
+  completionTime?: string;
+  downloadUrl?: string;
+  downloadFileName?: string;
+}
+
+interface Blog {
+  id: string;
+  title: string;
+  content: string;
+  image: string;
+  date: string;
   order: number;
 }
 
@@ -158,6 +170,7 @@ export default function App() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [experiences, setExperiences] = useState<Experience[]>([]);
+  const [blogs, setBlogs] = useState<Blog[]>([]);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAdmin, setShowAdmin] = useState(false);
@@ -234,11 +247,20 @@ export default function App() {
       handleFirestoreError(error, OperationType.LIST, 'experience');
     });
 
+    const blogsQuery = query(collection(db, 'blogs'), orderBy('order', 'desc'));
+    const unsubscribeBlogs = onSnapshot(blogsQuery, (snapshot) => {
+      const blogData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Blog));
+      setBlogs(blogData);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'blogs');
+    });
+
     return () => {
       unsubscribeAuth();
       unsubscribeSettings();
       unsubscribeProjects();
       unsubscribeExperience();
+      unsubscribeBlogs();
     };
   }, []);
 
@@ -278,6 +300,7 @@ export default function App() {
         settings={siteData as any}
         projects={projects as any}
         experiences={experiences as any}
+        blogs={blogs as any}
       />
     );
   }
@@ -415,15 +438,38 @@ export default function App() {
                       <div className="flex gap-3">
                         {project.github && <a href={project.github} className="text-neutral-600 hover:text-white transition-colors"><Github className="w-4 h-4" /></a>}
                         {project.link && <a href={project.link} className="text-neutral-600 hover:text-white transition-colors"><ExternalLink className="w-4 h-4" /></a>}
+                        {project.downloadUrl && (
+                          <a 
+                            href={project.downloadUrl} 
+                            download={project.downloadFileName || 'app-download'} 
+                            className="text-indigo-500 hover:text-indigo-400 transition-colors"
+                            title="Download App"
+                          >
+                            <Smartphone className="w-4 h-4" />
+                          </a>
+                        )}
                       </div>
                     </div>
                     <h3 className="text-2xl font-black uppercase tracking-tighter text-neutral-100 mb-3">{project.title}</h3>
-                    <p className="text-neutral-500 text-sm mb-6 leading-tight line-clamp-2 uppercase">{project.description}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {project.tech.map((t, tIdx) => (
-                        <span key={`${project.id}-${t}-${tIdx}`} className="text-[10px] font-bold text-neutral-700 uppercase tracking-widest">{t}</span>
-                      ))}
-                    </div>
+                    <p className="text-neutral-500 text-sm mb-6 leading-tight uppercase line-clamp-3">
+                      {project.description}
+                    </p>
+                    {(project.dateReceived || project.completionTime) && (
+                      <div className="flex flex-col gap-2 mt-auto border-t border-neutral-800 pt-4">
+                        {project.dateReceived && (
+                          <div className="flex justify-between items-center text-[9px] uppercase font-black tracking-widest text-neutral-600">
+                            <span>Started:</span>
+                            <span className="text-neutral-400">{project.dateReceived}</span>
+                          </div>
+                        )}
+                        {project.completionTime && (
+                          <div className="flex justify-between items-center text-[9px] uppercase font-black tracking-widest text-neutral-600">
+                            <span>Period:</span>
+                            <span className="text-neutral-400">{project.completionTime}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -457,6 +503,40 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        <section id="blogs" className="py-24 border-t border-neutral-900">
+          <div className="mb-16">
+            <h2 className="text-xs uppercase tracking-[0.4em] font-black text-neutral-600 mb-4">Gallery & Thoughts</h2>
+            <h3 className="text-4xl font-black uppercase tracking-tighter text-neutral-100">Blogs & Photos</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {blogs.map((blog, idx) => (
+              <motion.div 
+                key={blog.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1 }}
+                className="group relative h-[400px] bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden hover:border-indigo-500/50 transition-all cursor-pointer"
+              >
+                <img src={blog.image} alt={blog.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-8 flex flex-col justify-end transform translate-y-12 group-hover:translate-y-0 transition-transform duration-500">
+                  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-500 mb-2">{blog.date}</span>
+                  <h4 className="text-xl font-bold uppercase tracking-tight text-white mb-4">{blog.title}</h4>
+                  <p className="text-neutral-400 text-sm leading-tight uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-500 line-clamp-3">
+                    {blog.content}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+          {blogs.length === 0 && (
+            <div className="py-20 text-center border-2 border-dashed border-neutral-900 rounded-3xl">
+              <p className="text-neutral-600 italic">No blog posts yet.</p>
+            </div>
+          )}
+        </section>
 
         <footer id="contact" className="mt-24 pt-24 border-t border-neutral-900">
            <div className="flex flex-col md:flex-row items-end justify-between gap-12 mb-24">

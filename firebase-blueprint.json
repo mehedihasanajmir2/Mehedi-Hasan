@@ -33,14 +33,17 @@
       "properties": {
         "title": { "type": "string" },
         "description": { "type": "string" },
-        "tech": { "type": "array", "items": { "type": "string" } },
         "link": { "type": "string" },
         "github": { "type": "string" },
         "type": { "type": "string", "enum": ["web", "app", "graphic", "digital", "cpa", "other"] },
         "image": { "type": "string" },
-        "order": { "type": "number" }
+        "order": { "type": "number" },
+        "dateReceived": { "type": "string" },
+        "completionTime": { "type": "string" },
+        "downloadUrl": { "type": "string" },
+        "downloadFileName": { "type": "string" }
       },
-      "required": ["title", "description", "tech", "type", "image"]
+      "required": ["title", "description", "type", "image"]
     },
     "Experience": {
       "title": "Work Experience",
@@ -54,6 +57,19 @@
         "order": { "type": "number" }
       },
       "required": ["company", "role", "period", "description"]
+    },
+    "Blog": {
+      "title": "Blog Post",
+      "description": "A blog post or gallery item.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "image": { "type": "string" },
+        "date": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["title", "image", "content"]
     }
   },
   "firestore": {
@@ -68,6 +84,10 @@
     "experience/{expId}": {
       "schema": "Experience",
       "description": "List of professional experiences."
+    },
+    "blogs/{blogId}": {
+      "schema": "Blog",
+      "description": "Photos and blog posts."
     }
   }
 }
