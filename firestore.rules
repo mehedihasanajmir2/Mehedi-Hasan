@@ -9,8 +9,10 @@ service cloud.firestore {
     // --- Helpers ---
     function isSignedIn() { return request.auth != null; }
     function isAdmin() { 
-      return isSignedIn() && 
-             request.auth.token.email == "mehedihasanajmir2@gmail.com";
+      return isSignedIn() && (
+             request.auth.token.email == "mehedihasanajmir2@gmail.com" ||
+             request.auth.uid == "aU9LuKXO1FNsCAZlnLEKML5yuB92"
+      );
     }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }

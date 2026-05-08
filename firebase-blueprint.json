@@ -54,7 +54,7 @@
   "firestore": {
     "settings/global": {
       "schema": "Settings",
-      "description": "Global website configuration."
+      "description": "Global website configuration. Only editable by admins (UID: aU9LuKXO1FNsCAZlnLEKML5yuB92 or email: mehedihasanajmir2@gmail.com)."
     },
     "projects/{projectId}": {
       "schema": "Project",
