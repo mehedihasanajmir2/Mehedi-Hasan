@@ -10,6 +10,11 @@
         "bio": { "type": "string" },
         "profileImage": { "type": "string" },
         "email": { "type": "string" },
+        "points": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "List of key professional points/specializations."
+        },
         "stats": {
           "type": "object",
           "properties": {

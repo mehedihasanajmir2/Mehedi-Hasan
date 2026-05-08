@@ -29,12 +29,15 @@ import {
   collection
 } from 'firebase/firestore';
 
+import { Logo } from './Logo';
+
 interface SiteSettings {
   name: string;
   surname: string;
   role: string;
   bio: string;
   email: string;
+  points?: string[];
   github?: string;
   linkedin?: string;
   twitter?: string;
@@ -80,9 +83,12 @@ export function AdminDashboard({ user, onClose, settings, projects, experiences 
   return (
     <div className="fixed inset-0 z-[100] bg-neutral-950 flex flex-col md:flex-row h-screen">
       <aside className="w-full md:w-64 bg-neutral-900/50 border-b md:border-b-0 md:border-r border-neutral-800 p-6 flex flex-col">
-        <div className="flex items-center justify-between mb-12">
-          <div className="font-black text-xl tracking-tighter text-neutral-100">ADMIN PANEL</div>
-          <button onClick={onClose} className="md:hidden text-neutral-400 hover:text-white"><X /></button>
+        <div className="flex flex-col items-center gap-6 mb-12">
+          <Logo onClick={onClose} className="scale-[0.55] -mt-4 cursor-pointer hover:opacity-80 transition-opacity" />
+          <div className="flex items-center justify-between w-full">
+            <div className="font-black text-xs uppercase tracking-[0.3em] text-neutral-600 bg-neutral-800/50 px-3 py-1 rounded-full">ADMIN PANEL</div>
+            <button onClick={onClose} className="md:hidden text-neutral-400 hover:text-white"><X /></button>
+          </div>
         </div>
         <nav className="space-y-1">
           {tabs.map(tab => (
@@ -98,7 +104,12 @@ export function AdminDashboard({ user, onClose, settings, projects, experiences 
         </nav>
         <div className="mt-auto pt-6 border-t border-neutral-800">
           <div className="text-[10px] uppercase font-bold text-neutral-600 mb-2 truncate">Logged in as {user.email}</div>
-          <button onClick={() => { logout(); onClose(); }} className="flex items-center gap-2 text-xs font-bold text-red-500 hover:text-red-400 transition-colors"><LogOut className="w-4 h-4" /> Sign Out</button>
+          <button onClick={() => { 
+            logout(); 
+            sessionStorage.removeItem('admin_authenticated');
+            localStorage.removeItem('admin_session_expiry');
+            onClose(); 
+          }} className="flex items-center gap-2 text-xs font-bold text-red-500 hover:text-red-400 transition-colors"><LogOut className="w-4 h-4" /> Sign Out</button>
         </div>
       </aside>
       <main className="flex-grow overflow-y-auto p-4 md:p-12 pb-32">
@@ -127,6 +138,15 @@ export function AdminDashboard({ user, onClose, settings, projects, experiences 
 function SettingsEditor({ settings }: { settings: SiteSettings }) {
   const [data, setData] = useState(settings);
   const [saving, setSaving] = useState(false);
+
+  const points = data.points || ['', '', ''];
+
+  const updatePoint = (index: number, value: string) => {
+    const newPoints = [...points];
+    newPoints[index] = value;
+    setData({ ...data, points: newPoints });
+  };
+
   const save = async () => {
     setSaving(true);
     try {
@@ -141,7 +161,17 @@ function SettingsEditor({ settings }: { settings: SiteSettings }) {
       <InputField label="Surname" icon={Type} value={data.surname} onChange={v => setData({...data, surname: v})} />
       <InputField label="Role" icon={Monitor} value={data.role} onChange={v => setData({...data, role: v})} />
       <InputField label="Email" icon={Type} value={data.email} onChange={v => setData({...data, email: v})} />
-      <div className="md:col-span-2">
+      
+      <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-neutral-800 pt-6 mt-2">
+        <div className="md:col-span-3">
+          <label className="block text-[10px] uppercase font-bold text-neutral-500 mb-2">Professional Highlights (3 Points)</label>
+        </div>
+        <InputField label="Point 1" icon={Plus} value={points[0]} onChange={v => updatePoint(0, v)} placeholder="e.g. Building robust web architectures..." />
+        <InputField label="Point 2" icon={Plus} value={points[1]} onChange={v => updatePoint(1, v)} placeholder="e.g. Crafting visual identities..." />
+        <InputField label="Point 3" icon={Plus} value={points[2]} onChange={v => updatePoint(2, v)} placeholder="e.g. Turning complex problems..." />
+      </div>
+
+      <div className="md:col-span-2 pt-6 border-t border-neutral-800 mt-2">
         <label className="block text-[10px] uppercase font-bold text-neutral-500 mb-2">Bio</label>
         <textarea value={data.bio} onChange={e => setData({...data, bio: e.target.value})} className="w-full bg-neutral-800/50 border border-neutral-700 rounded-xl p-4 text-white text-sm focus:border-indigo-500 outline-none transition-colors h-32" />
       </div>

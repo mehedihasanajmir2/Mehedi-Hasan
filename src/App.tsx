@@ -54,9 +54,11 @@ const AdminDashboard = lazy(() => import('./components/AdminComponents').then(mo
 interface SiteSettings {
   name: string;
   surname: string;
+  role: string;
   bio: string;
   profileImage: string;
   email: string;
+  points?: string[];
   stats: {
     socialProjects: string;
     webApps: string;
@@ -194,9 +196,15 @@ export default function App() {
   const siteData = settings || {
     name: 'Mehedi',
     surname: 'Hasan',
-    bio: 'Full-stack developer building robust web architectures.',
+    role: 'Full-Stack Developer | Digital Marketer | Creative Designer',
+    bio: 'Building robust web architectures and scaling businesses through creative design and strategic marketing.',
     profileImage: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhsH3QzxWYJ-ILrnEjlNRNRuiKnkL06aNaPkLjPOInRW1EKGt_3U6Ug8W9Cbmi7Tg9IA6fj47XHAVkjWFJJswRc1m2DhwwycS6f3ZK6-9YZylwfMDs8ea4uCJlDQ2iURDiOkumcsbxrKWOfpLpxdFay6t_yQ0GU38s3-GA4KBedaO3FKaDec_tHVxYvma30/s1332/Gemini_Generated_Image_cohv0rcohv0rcohv.png',
     email: 'mehedihasanajmir2@gmail.com',
+    points: [
+      '🚀 Building robust web architectures and scaling businesses with CPA & Digital Marketing.',
+      '🎨 Crafting visual identities through Graphic Design.',
+      '💻 Turning complex problems into elegant, market-ready digital solutions.'
+    ],
     stats: { socialProjects: '50+', webApps: '25+', successRate: '100%' }
   };
 
@@ -242,13 +250,24 @@ export default function App() {
         <section className="mb-32 grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="md:col-span-12 lg:col-span-7">
 
+            <h2 className="text-xs uppercase tracking-[0.4em] font-black text-indigo-500 mb-6 border-l-2 border-indigo-500 pl-4">{siteData.role}</h2>
             <h1 className="text-[60px] sm:text-[100px] lg:text-[140px] leading-[0.8] font-black text-neutral-100 uppercase tracking-tighter mb-10">
               {siteData.name} <br />
               <span className="text-neutral-800">{siteData.surname}</span>
             </h1>
-            <p className="max-w-md text-xl md:text-2xl font-light text-neutral-400 leading-tight">
-              {siteData.bio}
-            </p>
+            <div className="space-y-6 max-w-xl">
+              {siteData.points && siteData.points.map((point, index) => (
+                <motion.p 
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.5 + index * 0.2 }}
+                  className="text-lg md:text-xl font-light text-neutral-400 leading-snug border-l border-neutral-900 pl-6 hover:border-indigo-500 transition-colors"
+                >
+                  {point}
+                </motion.p>
+              ))}
+            </div>
           </motion.div>
 
           <div className="md:col-span-12 lg:col-span-5 grid grid-cols-1 gap-12">
@@ -375,6 +394,8 @@ export default function App() {
               onSuccess={() => {
                 setIsAdminAuthenticated(true);
                 sessionStorage.setItem('admin_authenticated', 'true');
+                // Store persistent session expiry (2 hours)
+                localStorage.setItem('admin_session_expiry', (Date.now() + 2 * 60 * 60 * 1000).toString());
                 setIsPinModalOpen(false);
                 setShowAdmin(true);
               }} 
@@ -692,9 +713,16 @@ function PINModal({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: ()
         // Step 3: Vault door starts opening animation
         setTimeout(() => {
           setStep('door_opening');
-                        // Step 4: Login form revealed and door finish sliding
+                        // Step 4: Login form revealed or direct access if session valid
           setTimeout(() => {
-            setStep('login');
+            const expiry = localStorage.getItem('admin_session_expiry');
+            const isSessionValid = expiry && parseInt(expiry) > Date.now() && auth.currentUser;
+            
+            if (isSessionValid) {
+              onSuccess();
+            } else {
+              setStep('login');
+            }
           }, 5000);
         }, 800);
       }, 2000);
