@@ -11,7 +11,8 @@ service cloud.firestore {
     function isAdmin() { 
       return isSignedIn() && (
              request.auth.token.email == "mehedihasanajmir2@gmail.com" ||
-             request.auth.uid == "aU9LuKXO1FNsCAZlnLEKML5yuB92"
+             request.auth.uid == "aU9LuKXO1FNsCAZlnLEKML5yuB92" ||
+             (request.auth.token.email_verified == true && request.auth.token.email == "mehedihasanajmir2@gmail.com")
       );
     }
     function incoming() { return request.resource.data; }
@@ -21,11 +22,11 @@ service cloud.firestore {
     // --- Validation Blueprints ---
     function isValidSettings(data) {
       return data.keys().hasAll(['name', 'surname', 'bio', 'profileImage', 'email']) &&
-             data.keys().size() <= 8 && // Allowing for optional fields
+             data.keys().size() <= 12 && // Allowing for optional fields
              data.name is string && data.name.size() <= 100 &&
              data.surname is string && data.surname.size() <= 100 &&
              data.bio is string && data.bio.size() <= 2000 &&
-             data.profileImage is string && data.profileImage.size() <= 500 &&
+             data.profileImage is string && data.profileImage.size() <= 1000000 &&
              data.email is string && data.email.size() <= 200;
     }
 
@@ -34,7 +35,7 @@ service cloud.firestore {
              data.title is string && data.title.size() <= 200 &&
              data.type in ['web', 'app', 'graphic', 'digital', 'cpa', 'other'] &&
              data.description is string && data.description.size() <= 5000 &&
-             data.image is string && data.image.size() <= 2000000 &&
+             data.image is string && data.image.size() <= 1000000 &&
              (!('gallery' in data) || data.gallery is list) &&
              (!('dateReceived' in data) || data.dateReceived is string) &&
              (!('completionTime' in data) || data.completionTime is string) &&
@@ -46,7 +47,7 @@ service cloud.firestore {
       return data.keys().hasAll(['title', 'content', 'image']) &&
              data.title is string && data.title.size() <= 200 &&
              data.content is string && data.content.size() <= 10000 &&
-             data.image is string && data.image.size() <= 2000000 &&
+             data.image is string && data.image.size() <= 1000000 &&
              (!('gallery' in data) || data.gallery is list);
     }
 

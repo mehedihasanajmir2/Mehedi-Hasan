@@ -86,6 +86,36 @@ interface Blog {
   order: number;
 }
 
+const compressImage = (base64: string, maxWidth = 1200, maxHeight = 1200, quality = 0.7): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height *= maxWidth / width;
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width *= maxHeight / height;
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+  });
+};
+
 export function AdminDashboard({ user, onClose, settings, projects, experiences, blogs }: { 
   user: FirebaseUser; 
   onClose: () => void;
@@ -199,6 +229,47 @@ function SettingsEditor({ settings }: { settings: SiteSettings }) {
       <InputField label="Surname" icon={Type} value={data.surname} onChange={v => setData({...data, surname: v})} />
       <InputField label="Role" icon={Monitor} value={data.role} onChange={v => setData({...data, role: v})} />
       <InputField label="Email" icon={Type} value={data.email} onChange={v => setData({...data, email: v})} />
+
+      <div className="md:col-span-2 border-t border-neutral-800 pt-6 mt-2">
+        <label className="block text-[10px] uppercase font-bold text-neutral-500 mb-4">Profile Image</label>
+        <div className="flex items-center gap-6">
+          <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-neutral-800 bg-neutral-900 flex-shrink-0">
+            {data.profileImage ? (
+              <img src={data.profileImage} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-neutral-700">
+                <ImageIcon className="w-8 h-8" />
+              </div>
+            )}
+          </div>
+          <div className="flex-grow">
+            <div className="relative">
+              <button className="bg-neutral-800 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-neutral-700 transition-all">
+                Change Photo
+              </button>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = async () => {
+                      if (typeof reader.result === 'string') {
+                        const compressed = await compressImage(reader.result, 400, 400, 0.8);
+                        setData({ ...data, profileImage: compressed });
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }} 
+                className="absolute inset-0 opacity-0 cursor-pointer" 
+              />
+            </div>
+            <p className="text-[9px] text-neutral-600 mt-2 uppercase font-bold">Recommended: Square image, max 400x400px</p>
+          </div>
+        </div>
+      </div>
       
       <div className="md:col-span-2 border-t border-neutral-800 pt-6 mt-2">
         <div className="flex items-center justify-between mb-4">
@@ -353,8 +424,11 @@ function ProjectModal({ project, onClose }: { project: Project, onClose: () => v
     if (file) {
       setFileName(file.name);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setData({ ...data, image: reader.result as string });
+      reader.onloadend = async () => {
+        if (typeof reader.result === 'string') {
+          const compressed = await compressImage(reader.result);
+          setData({ ...data, image: compressed });
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -363,14 +437,20 @@ function ProjectModal({ project, onClose }: { project: Project, onClose: () => v
   const handleAppUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 1024 * 1024) {
+        alert('File is too large. Max size is 1MB. Please use an external link for larger files.');
+        return;
+      }
       setAppFileName(file.name);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setData({ 
-          ...data, 
-          downloadUrl: reader.result as string, 
-          downloadFileName: file.name 
-        });
+        if (typeof reader.result === 'string') {
+          setData({ 
+            ...data, 
+            downloadUrl: reader.result, 
+            downloadFileName: file.name 
+          });
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -379,13 +459,16 @@ function ProjectModal({ project, onClose }: { project: Project, onClose: () => v
   const handleGalleryAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      Array.from(files).forEach(file => {
+      Array.from(files).forEach((file: any) => {
         const reader = new FileReader();
-        reader.onloadend = () => {
-          setData(prev => ({
-            ...prev,
-            gallery: [...(prev.gallery || []), reader.result as string]
-          }));
+        reader.onloadend = async () => {
+          if (typeof reader.result === 'string') {
+            const compressed = await compressImage(reader.result, 1000, 1000, 0.6);
+            setData(prev => ({
+              ...prev,
+              gallery: [...(prev.gallery || []), compressed]
+            }));
+          }
         };
         reader.readAsDataURL(file);
       });
@@ -718,8 +801,11 @@ function BlogModal({ blog, onClose }: { blog: Blog, onClose: () => void }) {
     if (file) {
       setFileName(file.name);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setData({ ...data, image: reader.result as string });
+      reader.onloadend = async () => {
+        if (typeof reader.result === 'string') {
+          const compressed = await compressImage(reader.result);
+          setData({ ...data, image: compressed });
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -728,13 +814,16 @@ function BlogModal({ blog, onClose }: { blog: Blog, onClose: () => void }) {
   const handleGalleryAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      Array.from(files).forEach(file => {
+      Array.from(files).forEach((file: any) => {
         const reader = new FileReader();
-        reader.onloadend = () => {
-          setData(prev => ({
-            ...prev,
-            gallery: [...(prev.gallery || []), reader.result as string]
-          }));
+        reader.onloadend = async () => {
+          if (typeof reader.result === 'string') {
+            const compressed = await compressImage(reader.result, 1000, 1000, 0.6);
+            setData(prev => ({
+              ...prev,
+              gallery: [...(prev.gallery || []), compressed]
+            }));
+          }
         };
         reader.readAsDataURL(file);
       });

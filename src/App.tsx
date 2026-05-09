@@ -18,7 +18,8 @@ import {
   X,
   Edit2,
   Lock,
-  ShieldAlert
+  ShieldAlert,
+  Image as ImageIcon
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { 
