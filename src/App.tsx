@@ -498,7 +498,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
             <AnimatePresence mode="popLayout">
               {filteredProjects.map((project, idx) => (
                 <motion.div layout key={project.id} initial={{ opacity: 0, y: 30 }} 
@@ -509,76 +509,66 @@ export default function App() {
                 className="group relative bg-neutral-900 border border-neutral-800 overflow-hidden hover:border-indigo-500/50 transition-all duration-500 cursor-pointer"
               >
                   <div className="aspect-[4/3] overflow-hidden">
-                    <img src={project.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700" />
+                    <img src={project.image} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" />
                   </div>
-                  <div className="p-8">
+                  <div className="p-5">
                      <div className="flex items-center justify-between mb-4">
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-600 group-hover:text-indigo-500 transition-colors">{project.type}</span>
-                      <div className="flex gap-3 text-neutral-600" onClick={(e) => e.stopPropagation()}>
-                        {project.github && <a href={project.github} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="GitHub Source"><Github className="w-4 h-4" /></a>}
-                        {project.link && <a href={project.link} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="Live Preview"><ExternalLink className="w-4 h-4" /></a>}
+                      <span className="text-[8px] font-black uppercase tracking-[0.2em] text-neutral-600 group-hover:text-indigo-500 transition-colors uppercase">{project.type}</span>
+                      <div className="flex gap-2 text-neutral-600" onClick={(e) => e.stopPropagation()}>
+                        {project.github && <a href={project.github} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="GitHub Source"><Github className="w-3.5 h-3.5" /></a>}
+                        {project.link && <a href={project.link} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="Live Preview"><ExternalLink className="w-3.5 h-3.5" /></a>}
                       </div>
                     </div>
 
                     {project.type === 'app' && project.appLogo ? (
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-14 h-14 rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-900 group-hover:border-indigo-500/30 transition-colors">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-neutral-800 bg-neutral-900 group-hover:border-indigo-500/30 transition-colors">
                           <img src={project.appLogo} className="w-full h-full object-cover" alt="App Logo" />
                         </div>
                         <div>
-                          <h3 className="text-2xl font-black uppercase tracking-tighter text-neutral-100">{project.title}</h3>
-                          <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-wider text-green-500">
-                            <Smartphone className="w-2.5 h-2.5" /> Stable Version
+                          <h3 className="text-lg font-black uppercase tracking-tighter text-neutral-100 line-clamp-1">{project.title}</h3>
+                          <div className="flex items-center gap-1 text-[7px] font-black uppercase tracking-wider text-green-500">
+                            <Smartphone className="w-2 h-2" /> Stable
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <h3 className="text-2xl font-black uppercase tracking-tighter text-neutral-100 mb-3">{project.title}</h3>
+                      <h3 className="text-lg font-black uppercase tracking-tighter text-neutral-100 mb-4 line-clamp-1">{project.title}</h3>
                     )}
 
-                    <p className="text-neutral-500 text-sm mb-6 leading-tight uppercase line-clamp-3">
-                      {project.description}
-                    </p>
-
                     {project.type === 'app' && project.downloadUrl && (
-                      <div className="mb-6" onClick={(e) => e.stopPropagation()}>
+                      <div className="mb-4" onClick={(e) => e.stopPropagation()}>
                         <a 
                           href={project.downloadUrl} 
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 px-6 rounded-2xl flex items-center justify-center gap-3 text-xs uppercase tracking-[0.2em] shadow-lg shadow-indigo-600/20 active:scale-95 transition-all group/btn"
+                          className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] transition-all group/btn"
                         >
-                          <Zap className="w-4 h-4 text-white group-hover/btn:animate-pulse" />
-                          Download Now
+                          <Zap className="w-3.5 h-3.5" />
+                          Download
                         </a>
                       </div>
                     )}
 
                     {project.gallery && project.gallery.length > 0 && (
-                      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex gap-1.5 mb-4 overflow-x-auto pb-2 scrollbar-hide" onClick={(e) => e.stopPropagation()}>
                         {project.gallery.slice(0, 3).map((img, i) => (
-                          <div key={i} onClick={() => setViewingGallery({ images: project.gallery!, title: project.title })} className="w-12 h-12 rounded-lg overflow-hidden border border-neutral-800 flex-shrink-0 cursor-zoom-in hover:border-indigo-500 transition-colors">
-                            <img src={img} className="w-full h-full object-cover grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all" />
+                          <div key={i} onClick={() => setViewingGallery({ images: project.gallery!, title: project.title })} className="w-10 h-10 rounded-lg overflow-hidden border border-neutral-800 flex-shrink-0 cursor-zoom-in hover:border-indigo-500 transition-colors">
+                            <img src={img} className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-all" />
                           </div>
                         ))}
                         {project.gallery.length > 3 && (
-                          <div onClick={() => setViewingGallery({ images: project.gallery!, title: project.title })} className="w-12 h-12 rounded-lg bg-neutral-800 flex items-center justify-center text-[10px] font-black text-neutral-400 flex-shrink-0 cursor-zoom-in hover:bg-neutral-700 transition-colors">
+                          <div onClick={() => setViewingGallery({ images: project.gallery!, title: project.title })} className="w-10 h-10 rounded-lg bg-neutral-800 flex items-center justify-center text-[9px] font-black text-neutral-400 flex-shrink-0 cursor-zoom-in hover:bg-neutral-700 transition-colors">
                             +{project.gallery.length - 3}
                           </div>
                         )}
-                        <button 
-                          onClick={() => setViewingGallery({ images: project.gallery!, title: project.title })}
-                          className="ml-auto text-[9px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-400 self-center"
-                        >
-                          View All
-                        </button>
                       </div>
                     )}
 
                     {(project.dateReceived || project.completionTime) && (
-                      <div className="flex flex-col gap-2 mt-auto border-t border-neutral-800 pt-4">
+                      <div className="flex flex-col gap-1.5 mt-auto border-t border-neutral-800 pt-3">
                         {project.dateReceived && (
-                          <div className="flex justify-between items-center text-[9px] uppercase font-black tracking-widest text-neutral-600">
+                          <div className="flex justify-between items-center text-[8px] uppercase font-black tracking-widest text-neutral-600">
                             <span>Started:</span>
                             <span className="text-neutral-400">{project.dateReceived}</span>
                           </div>
@@ -624,7 +614,6 @@ export default function App() {
                   </div>
                   <div className="flex flex-col md:flex-row justify-between gap-4">
                     <p className="text-sm font-bold uppercase tracking-widest text-indigo-500 opacity-80">{exp.company}</p>
-                    <p className="text-neutral-500 leading-tight max-w-lg text-sm uppercase group-hover:text-neutral-300 transition-colors line-clamp-2">{exp.description}</p>
                   </div>
                 </motion.div>
               ))}
@@ -650,7 +639,7 @@ export default function App() {
                 className="group relative bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden hover:border-indigo-500/50 transition-all cursor-pointer flex flex-col"
               >
                 <div className="w-full overflow-hidden">
-                  <img src={blog.image} alt={blog.title} className="w-full h-auto object-contain grayscale group-hover:grayscale-0 transition-all duration-700" />
+                  <img src={blog.image} alt={blog.title} className="w-full h-auto object-contain transition-all duration-700" />
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-8 flex flex-col justify-end transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
                   <div className="flex justify-between items-center mb-2">
@@ -661,10 +650,7 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                  <h4 className="text-xl font-bold uppercase tracking-tight text-white mb-4">{blog.title}</h4>
-                  <p className="text-neutral-400 text-sm leading-tight uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-500 line-clamp-3">
-                    {blog.content}
-                  </p>
+                  <h4 className="text-xl font-bold uppercase tracking-tight text-white mb-2">{blog.title}</h4>
                 </div>
               </motion.div>
             ))}
@@ -724,11 +710,11 @@ export default function App() {
                     <motion.div 
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="rounded-[40px] overflow-hidden border border-neutral-900 mb-12 bg-neutral-900 flex justify-center items-center group"
+                      className="rounded-3xl overflow-hidden border border-neutral-900 mb-12 bg-neutral-900 flex justify-center items-center group max-w-xl"
                     >
                       <img 
                         src={selectedPost.type === 'project' ? (selectedPostData as Project).image : (selectedPostData as Blog).image} 
-                        className="max-w-full h-auto object-contain transition-transform duration-700 group-hover:scale-105" 
+                        className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-105" 
                         alt=""
                       />
                     </motion.div>
@@ -785,16 +771,6 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="prose prose-invert max-w-none mb-24">
-                    <p className="text-xl text-neutral-400 leading-relaxed uppercase whitespace-pre-wrap font-light">
-                      {selectedPost.type === 'project' 
-                        ? (selectedPostData as Project).description 
-                        : selectedPost.type === 'blog' 
-                        ? (selectedPostData as Blog).content 
-                        : (selectedPostData as Experience).description}
-                    </p>
-                  </div>
-
                   {selectedPost.type !== 'experience' && selectedPostData.gallery && selectedPostData.gallery.length > 0 && (
                     <div className="mb-24">
                       <h2 className="text-xs uppercase tracking-[0.4em] font-black text-neutral-600 mb-12">Gallery</h2>
@@ -806,12 +782,22 @@ export default function App() {
                             onClick={() => setViewingGallery({ images: (selectedPostData as any).gallery!, title: (selectedPostData as any).title })}
                             className="aspect-square rounded-3xl overflow-hidden border border-neutral-900 bg-neutral-900 cursor-zoom-in"
                           >
-                            <img src={img} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all" />
+                            <img src={img} className="w-full h-full object-cover transition-all" />
                           </motion.div>
                         ))}
                       </div>
                     </div>
                   )}
+
+                  <div className="prose prose-invert max-w-none mb-24">
+                    <p className="text-xl text-neutral-400 leading-relaxed uppercase whitespace-pre-wrap font-light">
+                      {selectedPost.type === 'project' 
+                        ? (selectedPostData as Project).description 
+                        : selectedPost.type === 'blog' 
+                        ? (selectedPostData as Blog).content 
+                        : (selectedPostData as Experience).description}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="lg:col-span-4 lg:sticky lg:top-32 self-start">
@@ -833,7 +819,7 @@ export default function App() {
                           >
                             <div className="w-20 h-20 rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-800 flex-shrink-0 flex items-center justify-center">
                               {('image' in post) ? (
-                                <img src={(post as any).image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                                <img src={(post as any).image} className="w-full h-full object-cover transition-all duration-500" />
                               ) : (
                                 <Briefcase className="w-8 h-8 text-neutral-700 group-hover:text-indigo-500 transition-colors" />
                               )}
