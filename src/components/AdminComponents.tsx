@@ -459,11 +459,16 @@ function ProjectModal({ project, onClose }: { project: Project, onClose: () => v
   const handleGalleryAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
+      if ((data.gallery || []).length + files.length > 8) {
+        alert('Max 8 images allowed in gallery to keep loading fast.');
+        return;
+      }
       Array.from(files).forEach((file: any) => {
         const reader = new FileReader();
         reader.onloadend = async () => {
           if (typeof reader.result === 'string') {
-            const compressed = await compressImage(reader.result, 1000, 1000, 0.6);
+            // Smaller resolution and lower quality for gallery items
+            const compressed = await compressImage(reader.result, 800, 800, 0.5);
             setData(prev => ({
               ...prev,
               gallery: [...(prev.gallery || []), compressed]
@@ -487,6 +492,14 @@ function ProjectModal({ project, onClose }: { project: Project, onClose: () => v
       alert('Please fill in Name, Image and Description');
       return;
     }
+
+    // Basic size check before saving to prevent Firestore 1MB error
+    const size = new Blob([JSON.stringify(data)]).size;
+    if (size > 950000) {
+      alert('This project has too much data (likely too many large photos). Please remove some gallery images or use smaller ones.');
+      return;
+    }
+
     setSaving(true);
     const id = project?.id || Math.random().toString(36).substr(2, 9);
     try { 
@@ -576,20 +589,52 @@ function ProjectModal({ project, onClose }: { project: Project, onClose: () => v
 
           {data.type === 'app' && (
             <div className="bg-indigo-500/5 border border-indigo-500/20 p-6 rounded-2xl">
-              <label className="block text-[10px] uppercase font-bold text-indigo-400 mb-2">Upload App File (APK/ZIP)</label>
-              <div className="relative">
-                <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
-                <div className="w-full bg-neutral-800/80 border border-indigo-500/30 rounded-xl py-4 pl-12 pr-4 text-white text-sm flex items-center justify-between">
-                  <span className="truncate opacity-60 italic">{appFileName || 'Upload application file...'}</span>
-                  <input 
-                    type="file" 
-                    onChange={handleAppUpload} 
-                    className="absolute inset-0 opacity-0 cursor-pointer" 
-                  />
+              <label className="block text-[10px] uppercase font-bold text-indigo-400 mb-2">App Download Options</label>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[9px] uppercase font-bold text-neutral-500 mb-1">Method 1: Upload File (Max 1MB)</label>
+                  <div className="relative">
+                    <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
+                    <div className="w-full bg-neutral-800/80 border border-indigo-500/30 rounded-xl py-4 pl-12 pr-4 text-white text-sm flex items-center justify-between">
+                      <span className="truncate opacity-60 italic">{appFileName || 'Upload APK/ZIP...'}</span>
+                      <input 
+                        type="file" 
+                        onChange={handleAppUpload} 
+                        className="absolute inset-0 opacity-0 cursor-pointer" 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="h-px flex-grow bg-indigo-500/10"></div>
+                  <span className="text-[9px] font-black text-neutral-600">OR</span>
+                  <div className="h-px flex-grow bg-indigo-500/10"></div>
+                </div>
+
+                <div>
+                  <label className="block text-[9px] uppercase font-bold text-neutral-500 mb-1">Method 2: External Download Link (Google Drive/Mega)</label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
+                    <input
+                      type="text"
+                      value={data.downloadUrl?.startsWith('data:') ? '' : data.downloadUrl}
+                      onChange={(v) => {
+                        setData({...data, downloadUrl: v.target.value, downloadFileName: 'External Link'});
+                        setAppFileName('External Link');
+                      }}
+                      placeholder="Paste your download link here..."
+                      className="w-full bg-neutral-800/80 border border-indigo-500/30 rounded-xl py-4 pl-12 pr-4 text-white text-sm focus:border-indigo-500 outline-none transition-colors"
+                    />
+                  </div>
                 </div>
               </div>
+
               {data.downloadUrl && (
-                <p className="mt-2 text-[9px] text-indigo-400/60 uppercase font-bold">File ready for download</p>
+                <p className="mt-3 text-[9px] text-green-400 uppercase font-black tracking-widest flex items-center gap-1">
+                  <Zap className="w-3 h-3" /> Ready to save
+                </p>
               )}
             </div>
           )}
@@ -814,11 +859,15 @@ function BlogModal({ blog, onClose }: { blog: Blog, onClose: () => void }) {
   const handleGalleryAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
+      if ((data.gallery || []).length + files.length > 10) {
+        alert('Max 10 images allowed per blog post.');
+        return;
+      }
       Array.from(files).forEach((file: any) => {
         const reader = new FileReader();
         reader.onloadend = async () => {
           if (typeof reader.result === 'string') {
-            const compressed = await compressImage(reader.result, 1000, 1000, 0.6);
+            const compressed = await compressImage(reader.result, 800, 800, 0.4);
             setData(prev => ({
               ...prev,
               gallery: [...(prev.gallery || []), compressed]
@@ -842,6 +891,13 @@ function BlogModal({ blog, onClose }: { blog: Blog, onClose: () => void }) {
       alert('Please fill in Title, Image and Content');
       return;
     }
+
+    const size = new Blob([JSON.stringify(data)]).size;
+    if (size > 950000) {
+      alert('Blog post is too large. Please use fewer or smaller images.');
+      return;
+    }
+
     setSaving(true);
     const id = blog?.id || Math.random().toString(36).substr(2, 9);
     try { 
