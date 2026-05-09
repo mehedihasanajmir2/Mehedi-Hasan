@@ -668,6 +668,16 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {viewingGallery && (
+          <GalleryModal 
+            images={viewingGallery.images} 
+            title={viewingGallery.title} 
+            onClose={() => setViewingGallery(null)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1235,16 +1245,6 @@ function PINModal({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: ()
                 </div>
               </motion.div>
             </div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {viewingGallery && (
-            <GalleryModal 
-              images={viewingGallery.images} 
-              title={viewingGallery.title} 
-              onClose={() => setViewingGallery(null)} 
-            />
           )}
         </AnimatePresence>
       </div>
