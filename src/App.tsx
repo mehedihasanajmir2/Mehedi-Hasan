@@ -19,7 +19,8 @@ import {
   Edit2,
   Lock,
   ShieldAlert,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Zap
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { 
@@ -75,6 +76,7 @@ interface Project {
   github?: string;
   type: 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other';
   image: string;
+  appLogo?: string;
   gallery?: string[];
   order: number;
   dateReceived?: string;
@@ -182,7 +184,7 @@ function GalleryModal({ images, onClose, title }: { images: string[]; onClose: (
       </div>
       
       <div className="flex-grow flex flex-col md:flex-row gap-8 items-center justify-center min-h-0">
-        <div className="w-full md:w-3/4 h-full relative aspect-video flex items-center justify-center">
+        <div className="w-full md:w-3/4 h-full relative flex items-center justify-center">
           <AnimatePresence mode="wait">
             <motion.img 
               key={active}
@@ -190,7 +192,7 @@ function GalleryModal({ images, onClose, title }: { images: string[]; onClose: (
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.05 }}
               src={images[active]} 
-              className="w-full h-full object-contain rounded-3xl"
+              className="max-w-full max-h-full w-auto h-auto object-contain rounded-3xl shadow-2xl"
             />
           </AnimatePresence>
           
@@ -496,25 +498,45 @@ export default function App() {
                   <div className="p-8">
                      <div className="flex items-center justify-between mb-4">
                       <span className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-600 group-hover:text-indigo-500 transition-colors">{project.type}</span>
-                      <div className="flex gap-3">
-                        {project.github && <a href={project.github} className="text-neutral-600 hover:text-white transition-colors"><Github className="w-4 h-4" /></a>}
-                        {project.link && <a href={project.link} className="text-neutral-600 hover:text-white transition-colors"><ExternalLink className="w-4 h-4" /></a>}
-                        {project.downloadUrl && (
-                          <a 
-                            href={project.downloadUrl} 
-                            download={project.downloadFileName || 'app-download'} 
-                            className="text-indigo-500 hover:text-indigo-400 transition-colors"
-                            title="Download App"
-                          >
-                            <Smartphone className="w-4 h-4" />
-                          </a>
-                        )}
+                      <div className="flex gap-3 text-neutral-600">
+                        {project.github && <a href={project.github} className="hover:text-white transition-colors" title="GitHub Source"><Github className="w-4 h-4" /></a>}
+                        {project.link && <a href={project.link} className="hover:text-white transition-colors" title="Live Preview"><ExternalLink className="w-4 h-4" /></a>}
                       </div>
                     </div>
-                    <h3 className="text-2xl font-black uppercase tracking-tighter text-neutral-100 mb-3">{project.title}</h3>
+
+                    {project.type === 'app' && project.appLogo ? (
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="w-14 h-14 rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-900 group-hover:border-indigo-500/30 transition-colors">
+                          <img src={project.appLogo} className="w-full h-full object-cover" alt="App Logo" />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-black uppercase tracking-tighter text-neutral-100">{project.title}</h3>
+                          <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-wider text-green-500">
+                            <Smartphone className="w-2.5 h-2.5" /> Stable Version
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <h3 className="text-2xl font-black uppercase tracking-tighter text-neutral-100 mb-3">{project.title}</h3>
+                    )}
+
                     <p className="text-neutral-500 text-sm mb-6 leading-tight uppercase line-clamp-3">
                       {project.description}
                     </p>
+
+                    {project.type === 'app' && project.downloadUrl && (
+                      <div className="mb-6">
+                        <a 
+                          href={project.downloadUrl} 
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 px-6 rounded-2xl flex items-center justify-center gap-3 text-xs uppercase tracking-[0.2em] shadow-lg shadow-indigo-600/20 active:scale-95 transition-all group/btn"
+                        >
+                          <Zap className="w-4 h-4 text-white group-hover/btn:animate-pulse" />
+                          Download Now
+                        </a>
+                      </div>
+                    )}
 
                     {project.gallery && project.gallery.length > 0 && (
                       <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
@@ -602,10 +624,12 @@ export default function App() {
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1 }}
                 onClick={() => blog.gallery && blog.gallery.length > 0 && setViewingGallery({ images: [blog.image, ...blog.gallery], title: blog.title })}
-                className="group relative h-[400px] bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden hover:border-indigo-500/50 transition-all cursor-pointer"
+                className="group relative bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden hover:border-indigo-500/50 transition-all cursor-pointer flex flex-col"
               >
-                <img src={blog.image} alt={blog.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-8 flex flex-col justify-end transform translate-y-12 group-hover:translate-y-0 transition-transform duration-500">
+                <div className="w-full overflow-hidden">
+                  <img src={blog.image} alt={blog.title} className="w-full h-auto object-contain grayscale group-hover:grayscale-0 transition-all duration-700" />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-8 flex flex-col justify-end transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-500">{blog.date}</span>
                     {blog.gallery && blog.gallery.length > 0 && (

@@ -36,6 +36,7 @@ service cloud.firestore {
              data.type in ['web', 'app', 'graphic', 'digital', 'cpa', 'other'] &&
              data.description is string && data.description.size() <= 5000 &&
              data.image is string && data.image.size() <= 1000000 &&
+             (!('appLogo' in data) || (data.appLogo is string && data.appLogo.size() <= 500000)) &&
              (!('gallery' in data) || data.gallery is list) &&
              (!('dateReceived' in data) || data.dateReceived is string) &&
              (!('completionTime' in data) || data.completionTime is string) &&

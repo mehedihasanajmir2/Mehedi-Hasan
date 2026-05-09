@@ -57,6 +57,7 @@ interface Project {
   title: string;
   description: string;
   image: string;
+  appLogo?: string;
   gallery?: string[];
   link: string;
   type: 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other';
@@ -533,8 +534,8 @@ function ProjectModal({ project, onClose }: { project: Project, onClose: () => v
               </div>
             </div>
             {data.image && (
-              <div className="mt-4 aspect-video rounded-xl overflow-hidden border border-neutral-800">
-                <img src={data.image} alt="Preview" className="w-full h-full object-cover" />
+              <div className="mt-4 rounded-xl overflow-hidden border border-neutral-800 bg-black/50 flex justify-center items-center">
+                <img src={data.image} alt="Preview" className="max-w-full h-auto object-contain" />
               </div>
             )}
           </div>
@@ -588,54 +589,96 @@ function ProjectModal({ project, onClose }: { project: Project, onClose: () => v
           </div>
 
           {data.type === 'app' && (
-            <div className="bg-indigo-500/5 border border-indigo-500/20 p-6 rounded-2xl">
-              <label className="block text-[10px] uppercase font-bold text-indigo-400 mb-2">App Download Options</label>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-[9px] uppercase font-bold text-neutral-500 mb-1">Method 1: Upload File (Max 1MB)</label>
-                  <div className="relative">
-                    <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
-                    <div className="w-full bg-neutral-800/80 border border-indigo-500/30 rounded-xl py-4 pl-12 pr-4 text-white text-sm flex items-center justify-between">
-                      <span className="truncate opacity-60 italic">{appFileName || 'Upload APK/ZIP...'}</span>
+            <div className="space-y-6">
+              <div className="bg-neutral-800/30 p-6 rounded-2xl border border-neutral-800">
+                <label className="block text-[10px] uppercase font-bold text-neutral-500 mb-4">App Logo (Icon)</label>
+                <div className="flex items-center gap-6">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden border border-neutral-700 bg-neutral-900 flex-shrink-0">
+                    {data.appLogo ? (
+                      <img src={data.appLogo} alt="Logo" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-neutral-800">
+                        <Smartphone className="w-6 h-6" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-grow">
+                    <div className="relative">
+                      <button className="bg-indigo-500/10 text-indigo-400 px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-indigo-500/20 transition-all">
+                        Upload App Icon
+                      </button>
                       <input 
                         type="file" 
-                        onChange={handleAppUpload} 
+                        accept="image/*" 
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = async () => {
+                              if (typeof reader.result === 'string') {
+                                const compressed = await compressImage(reader.result, 200, 200, 0.8);
+                                setData({ ...data, appLogo: compressed });
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }} 
                         className="absolute inset-0 opacity-0 cursor-pointer" 
                       />
                     </div>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="h-px flex-grow bg-indigo-500/10"></div>
-                  <span className="text-[9px] font-black text-neutral-600">OR</span>
-                  <div className="h-px flex-grow bg-indigo-500/10"></div>
-                </div>
-
-                <div>
-                  <label className="block text-[9px] uppercase font-bold text-neutral-500 mb-1">Method 2: External Download Link (Google Drive/Mega)</label>
-                  <div className="relative">
-                    <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
-                    <input
-                      type="text"
-                      value={data.downloadUrl?.startsWith('data:') ? '' : data.downloadUrl}
-                      onChange={(v) => {
-                        setData({...data, downloadUrl: v.target.value, downloadFileName: 'External Link'});
-                        setAppFileName('External Link');
-                      }}
-                      placeholder="Paste your download link here..."
-                      className="w-full bg-neutral-800/80 border border-indigo-500/30 rounded-xl py-4 pl-12 pr-4 text-white text-sm focus:border-indigo-500 outline-none transition-colors"
-                    />
-                  </div>
-                </div>
               </div>
 
-              {data.downloadUrl && (
-                <p className="mt-3 text-[9px] text-green-400 uppercase font-black tracking-widest flex items-center gap-1">
-                  <Zap className="w-3 h-3" /> Ready to save
-                </p>
-              )}
+              <div className="bg-indigo-500/5 border border-indigo-500/20 p-6 rounded-2xl">
+                <label className="block text-[10px] uppercase font-bold text-indigo-400 mb-2">App Download Options</label>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[9px] uppercase font-bold text-neutral-500 mb-1 font-mono">Option A: Link (Google Drive / Mega)</label>
+                    <div className="relative">
+                      <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
+                      <input
+                        type="text"
+                        value={data.downloadUrl?.startsWith('data:') ? '' : data.downloadUrl}
+                        onChange={(v) => {
+                          setData({...data, downloadUrl: v.target.value, downloadFileName: 'External Link'});
+                          setAppFileName('External Link');
+                        }}
+                        placeholder="Paste Google Drive/External link here..."
+                        className="w-full bg-neutral-800/80 border border-indigo-500/30 rounded-xl py-4 pl-12 pr-4 text-white text-sm focus:border-indigo-500 outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="h-px flex-grow bg-indigo-500/10"></div>
+                    <span className="text-[9px] font-black text-neutral-600">OR</span>
+                    <div className="h-px flex-grow bg-indigo-500/10"></div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[9px] uppercase font-bold text-neutral-500 mb-1 font-mono">Option B: Upload Direct File (Max 1MB)</label>
+                    <div className="relative">
+                      <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
+                      <div className="w-full bg-neutral-800/80 border border-indigo-500/30 rounded-xl py-4 pl-12 pr-4 text-white text-sm flex items-center justify-between">
+                        <span className="truncate opacity-60 italic">{appFileName || 'Upload APK/ZIP...'}</span>
+                        <input 
+                          type="file" 
+                          onChange={handleAppUpload} 
+                          className="absolute inset-0 opacity-0 cursor-pointer" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {data.downloadUrl && (
+                  <p className="mt-3 text-[9px] text-green-400 uppercase font-black tracking-widest flex items-center gap-1">
+                    <Zap className="w-3 h-3" /> App link setup complete
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
@@ -924,8 +967,8 @@ function BlogModal({ blog, onClose }: { blog: Blog, onClose: () => void }) {
               </div>
             </div>
             {data.image && (
-              <div className="mt-4 aspect-video rounded-xl overflow-hidden border border-neutral-800">
-                <img src={data.image} alt="Preview" className="w-full h-full object-cover" />
+              <div className="mt-4 rounded-xl overflow-hidden border border-neutral-800 bg-black/50 flex justify-center items-center">
+                <img src={data.image} alt="Preview" className="max-w-full h-auto object-contain" />
               </div>
             )}
           </div>
