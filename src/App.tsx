@@ -244,12 +244,14 @@ export default function App() {
   const [lastClickTime, setLastClickTime] = useState(0);
   const [activeTab, setActiveTab] = useState<'all' | 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other'>('all');
   const [viewingGallery, setViewingGallery] = useState<{ images: string[], title: string } | null>(null);
-  const [selectedPost, setSelectedPost] = useState<{ type: 'project' | 'blog', id: string } | null>(null);
+  const [selectedPost, setSelectedPost] = useState<{ type: 'project' | 'blog' | 'experience', id: string } | null>(null);
 
   const selectedPostData = selectedPost ? (
     selectedPost.type === 'project' 
       ? projects.find(p => p.id === selectedPost.id) 
-      : blogs.find(b => b.id === selectedPost.id)
+      : selectedPost.type === 'blog'
+      ? blogs.find(b => b.id === selectedPost.id)
+      : experiences.find(e => e.id === selectedPost.id)
   ) : null;
 
   // Disable scrolling when PIN modal is open
@@ -596,16 +598,23 @@ export default function App() {
           </div>
         </section>
 
-        <div className="grid md:grid-cols-12 gap-24 py-24 border-t border-neutral-900">
+        <section id="experience" className="grid md:grid-cols-12 gap-24 py-24 border-t border-neutral-900">
           <div className="md:col-span-4">
             <h2 className="text-xs uppercase tracking-[0.4em] font-black text-neutral-600 mb-8">Bio</h2>
             <p className="text-xl font-light text-neutral-400 leading-snug uppercase">{siteData.bio}</p>
           </div>
           <div className="md:col-span-8 flex flex-col gap-12">
-            <h2 className="text-xs uppercase tracking-[0.4em] font-black text-neutral-600">History</h2>
+            <h2 className="text-xs uppercase tracking-[0.4em] font-black text-neutral-600">Experience</h2>
             <div className="space-y-16">
               {experiences.map((exp, idx) => (
-                <motion.div key={exp.id} initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="group">
+                <motion.div 
+                  key={exp.id} 
+                  initial={{ opacity: 0, x: 20 }} 
+                  whileInView={{ opacity: 1, x: 0 }} 
+                  viewport={{ once: true }} 
+                  onClick={() => setSelectedPost({ type: 'experience', id: exp.id })}
+                  className="group cursor-pointer"
+                >
                   <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-4 mb-4 border-b border-neutral-900 pb-4 group-hover:border-indigo-500 transition-colors">
                     <div className="flex items-center gap-4">
                       <span className="text-xs text-neutral-700 font-bold">0{idx + 1}</span>
@@ -615,13 +624,13 @@ export default function App() {
                   </div>
                   <div className="flex flex-col md:flex-row justify-between gap-4">
                     <p className="text-sm font-bold uppercase tracking-widest text-indigo-500 opacity-80">{exp.company}</p>
-                    <p className="text-neutral-500 leading-tight max-w-lg text-sm uppercase">{exp.description}</p>
+                    <p className="text-neutral-500 leading-tight max-w-lg text-sm uppercase group-hover:text-neutral-300 transition-colors line-clamp-2">{exp.description}</p>
                   </div>
                 </motion.div>
               ))}
             </div>
           </div>
-        </div>
+        </section>
 
         <section id="blogs" className="py-24 border-t border-neutral-900">
           <div className="mb-16">
@@ -711,27 +720,29 @@ export default function App() {
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
                 <div className="lg:col-span-8">
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="rounded-[40px] overflow-hidden border border-neutral-900 mb-12 bg-neutral-900 flex justify-center items-center group"
-                  >
-                    <img 
-                      src={selectedPost.type === 'project' ? (selectedPostData as Project).image : (selectedPostData as Blog).image} 
-                      className="max-w-full h-auto object-contain transition-transform duration-700 group-hover:scale-105" 
-                      alt=""
-                    />
-                  </motion.div>
+                  {selectedPost.type !== 'experience' && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="rounded-[40px] overflow-hidden border border-neutral-900 mb-12 bg-neutral-900 flex justify-center items-center group"
+                    >
+                      <img 
+                        src={selectedPost.type === 'project' ? (selectedPostData as Project).image : (selectedPostData as Blog).image} 
+                        className="max-w-full h-auto object-contain transition-transform duration-700 group-hover:scale-105" 
+                        alt=""
+                      />
+                    </motion.div>
+                  )}
 
                   <h1 className="text-4xl md:text-6xl lg:text-7xl font-black uppercase tracking-tighter text-white mb-8">
-                    {selectedPostData.title}
+                    {selectedPost.type === 'experience' ? (selectedPostData as Experience).role : selectedPostData.title}
                   </h1>
 
                   <div className="flex flex-wrap gap-8 items-center mb-12 py-8 border-y border-neutral-900">
                     <div>
                       <div className="text-[10px] uppercase font-black tracking-widest text-neutral-600 mb-1">Type</div>
                       <div className="text-sm font-bold uppercase tracking-tight text-indigo-500">
-                        {selectedPost.type === 'project' ? (selectedPostData as Project).type : 'Blog Post'}
+                        {selectedPost.type === 'project' ? (selectedPostData as Project).type : selectedPost.type === 'blog' ? 'Blog Post' : 'Experience'}
                       </div>
                     </div>
                     {selectedPost.type === 'project' && (selectedPostData as Project).dateReceived && (
@@ -744,6 +755,18 @@ export default function App() {
                       <div>
                         <div className="text-[10px] uppercase font-black tracking-widest text-neutral-600 mb-1">Published</div>
                         <div className="text-sm font-bold uppercase tracking-tight text-neutral-400">{(selectedPostData as Blog).date}</div>
+                      </div>
+                    )}
+                    {selectedPost.type === 'experience' && (selectedPostData as Experience).period && (
+                      <div>
+                        <div className="text-[10px] uppercase font-black tracking-widest text-neutral-600 mb-1">Period</div>
+                        <div className="text-sm font-bold uppercase tracking-tight text-neutral-400">{(selectedPostData as Experience).period}</div>
+                      </div>
+                    )}
+                    {selectedPost.type === 'experience' && (selectedPostData as Experience).company && (
+                      <div>
+                        <div className="text-[10px] uppercase font-black tracking-widest text-neutral-600 mb-1">Company</div>
+                        <div className="text-sm font-bold uppercase tracking-tight text-neutral-400">{(selectedPostData as Experience).company}</div>
                       </div>
                     )}
                     {selectedPost.type === 'project' && ((selectedPostData as Project).link || (selectedPostData as Project).github) && (
@@ -764,11 +787,15 @@ export default function App() {
 
                   <div className="prose prose-invert max-w-none mb-24">
                     <p className="text-xl text-neutral-400 leading-relaxed uppercase whitespace-pre-wrap font-light">
-                      {selectedPost.type === 'project' ? (selectedPostData as Project).description : (selectedPostData as Blog).content}
+                      {selectedPost.type === 'project' 
+                        ? (selectedPostData as Project).description 
+                        : selectedPost.type === 'blog' 
+                        ? (selectedPostData as Blog).content 
+                        : (selectedPostData as Experience).description}
                     </p>
                   </div>
 
-                  {selectedPostData.gallery && selectedPostData.gallery.length > 0 && (
+                  {selectedPost.type !== 'experience' && selectedPostData.gallery && selectedPostData.gallery.length > 0 && (
                     <div className="mb-24">
                       <h2 className="text-xs uppercase tracking-[0.4em] font-black text-neutral-600 mb-12">Gallery</h2>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -776,7 +803,7 @@ export default function App() {
                           <motion.div 
                             key={i} 
                             whileHover={{ scale: 1.02 }}
-                            onClick={() => setViewingGallery({ images: selectedPostData.gallery!, title: selectedPostData.title })}
+                            onClick={() => setViewingGallery({ images: (selectedPostData as any).gallery!, title: (selectedPostData as any).title })}
                             className="aspect-square rounded-3xl overflow-hidden border border-neutral-900 bg-neutral-900 cursor-zoom-in"
                           >
                             <img src={img} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all" />
@@ -791,27 +818,32 @@ export default function App() {
                   <div className="p-8 rounded-[40px] border border-neutral-900 bg-neutral-950/50 backdrop-blur-md">
                     <h2 className="text-xs uppercase tracking-[0.4em] font-black text-neutral-600 mb-8 underline decoration-indigo-500 underline-offset-8">More from Feed</h2>
                     <div className="space-y-6">
-                      {[...projects, ...blogs]
+                      {[...projects, ...blogs, ...experiences]
                         .filter(p => p.id !== selectedPost.id)
+                        .sort(() => Math.random() - 0.5)
                         .slice(0, 6)
                         .map((post) => (
                           <motion.div 
                             key={post.id}
                             onClick={() => setSelectedPost({ 
-                              type: (post as Blog).content ? 'blog' : 'project', 
+                              type: (post as Blog).content ? 'blog' : (post as Experience).company ? 'experience' : 'project', 
                               id: post.id 
                             })}
                             className="flex gap-4 group cursor-pointer"
                           >
-                            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-800 flex-shrink-0">
-                              <img src={post.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-800 flex-shrink-0 flex items-center justify-center">
+                              {('image' in post) ? (
+                                <img src={(post as any).image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                              ) : (
+                                <Briefcase className="w-8 h-8 text-neutral-700 group-hover:text-indigo-500 transition-colors" />
+                              )}
                             </div>
                             <div className="flex flex-col justify-center">
                               <span className="text-[8px] font-black uppercase tracking-[0.2em] text-neutral-700 mb-1 group-hover:text-indigo-500 transition-colors">
-                                {(post as Blog).content ? 'Blog' : (post as Project).type}
+                                {(post as Blog).content ? 'Blog' : (post as Experience).company ? 'Experience' : (post as Project).type}
                               </span>
                               <h4 className="text-sm font-bold uppercase tracking-tight text-neutral-400 group-hover:text-white transition-colors line-clamp-2">
-                                {post.title}
+                                {(post as any).title || (post as any).role}
                               </h4>
                             </div>
                           </motion.div>
