@@ -998,6 +998,7 @@ function PINModal({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: ()
             key="login-modal-reveal"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={step === 'login' ? { opacity: 1, scale: 1 } : { opacity: 0.3, scale: 0.9 }}
+            transition={{ duration: 0.8 }}
             className="absolute inset-0 flex items-center justify-center z-[50]"
           >
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-green-500/10 blur-[100px] rounded-full pointer-events-none" />
@@ -1087,28 +1088,32 @@ function PINModal({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: ()
                   key="light-burst"
                   initial={{ opacity: 0, scaleX: 0, scaleY: 0.1 }}
                   animate={{ 
-                    opacity: [0, 0, 1, 0.8, 1], 
-                    scaleX: [0, 0, 1, 3, 6], 
-                    scaleY: [0.1, 0.1, 0.5, 2, 4] 
+                    opacity: [0, 1, 0.8, 0], 
+                    scaleX: [0, 1, 3, 8], 
+                    scaleY: [0.1, 0.5, 2, 6] 
                   }}
-                  transition={{ duration: 5, times: [0, 0.1, 0.2, 0.5, 1], ease: "easeInOut" }}
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-full bg-green-400 blur-[60px] z-[150]"
+                  transition={{ duration: 3, times: [0, 0.2, 0.5, 1], ease: "easeOut" }}
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-full bg-green-400 blur-[60px] z-[150] pointer-events-none will-change-transform"
                 />
               )}
-                            {/* Left Door */}
+              {/* Left Door */}
               <motion.div 
                 key="left-vault-door"
                 initial={{ x: 0 }}
                 animate={(step === 'door_opening' || step === 'login') ? { x: "-100%" } : { x: 0 }}
-                transition={{ duration: 5, ease: "easeInOut" }}
-                className="w-1/2 h-full bg-[#111] border-r-8 border-[#333] shadow-[inner_0_0_100px_rgba(0,0,0,1)] relative flex items-center justify-end overflow-hidden"
+                transition={{ 
+                  duration: 3, 
+                  ease: [0.16, 1, 0.3, 1], // Expo Out
+                  force3D: true 
+                }}
+                className="w-1/2 h-full bg-[#111] border-r-8 border-[#333] shadow-[inner_0_0_100px_rgba(0,0,0,1)] relative flex items-center justify-end overflow-hidden will-change-transform"
               >
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_right,_#222,_#111)]" />
                 <div className="mr-8 z-10">
                   <div className="w-40 h-40 rounded-full border-[12px] border-[#222] shadow-[inset_0_0_40px_rgba(0,0,0,1)] relative flex items-center justify-center bg-[#0a0a0a]">
                     <motion.div 
                       animate={(step === 'door_opening' || step === 'login') ? { rotate: 720 } : {}}
-                      transition={{ duration: 5, ease: "easeInOut" }}
+                      transition={{ duration: 3, ease: [0.16, 1, 0.3, 1] }}
                       className="w-28 h-6 bg-neutral-800 rounded-full shadow-lg border-2 border-neutral-700"
                     />
                     <div className="absolute w-8 h-8 rounded-full bg-neutral-900 border-4 border-neutral-800" />
@@ -1120,15 +1125,19 @@ function PINModal({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: ()
                 key="right-vault-door"
                 initial={{ x: 0 }}
                 animate={(step === 'door_opening' || step === 'login') ? { x: "100%" } : { x: 0 }}
-                transition={{ duration: 5, ease: "easeInOut" }}
-                className="w-1/2 h-full bg-[#111] border-l-8 border-[#333] shadow-[inner_0_0_100px_rgba(0,0,0,1)] relative flex items-center justify-start overflow-hidden"
+                transition={{ 
+                  duration: 3, 
+                  ease: [0.16, 1, 0.3, 1], // Expo Out
+                  force3D: true 
+                }}
+                className="w-1/2 h-full bg-[#111] border-l-8 border-[#333] shadow-[inner_0_0_100px_rgba(0,0,0,1)] relative flex items-center justify-start overflow-hidden will-change-transform"
               >
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_left,_#222,_#111)]" />
                 <div className="ml-8 z-10">
                   <div className="w-40 h-40 rounded-full border-[12px] border-[#222] shadow-[inset_0_0_40px_rgba(0,0,0,1)] relative flex items-center justify-center bg-[#0a0a0a]">
                     <motion.div 
                       animate={(step === 'door_opening' || step === 'login') ? { rotate: -720 } : {}}
-                      transition={{ duration: 5, ease: "easeInOut" }}
+                      transition={{ duration: 3, ease: [0.16, 1, 0.3, 1] }}
                       className="w-28 h-6 bg-neutral-800 rounded-full shadow-lg border-2 border-neutral-700"
                     />
                     <div className="absolute w-8 h-8 rounded-full bg-neutral-900 border-4 border-neutral-800" />

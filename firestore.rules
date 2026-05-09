@@ -30,11 +30,22 @@ service cloud.firestore {
     }
 
     function isValidProject(data) {
-      return data.keys().hasAll(['title', 'description', 'tech', 'type', 'image']) &&
+      return data.keys().hasAll(['title', 'description', 'type', 'image']) &&
              data.title is string && data.title.size() <= 200 &&
-             data.type in ['web', 'app', 'other'] &&
-             data.tech is list && data.tech.size() <= 20 &&
-             data.image is string && data.image.size() <= 500;
+             data.type in ['web', 'app', 'graphic', 'digital', 'cpa', 'other'] &&
+             data.description is string && data.description.size() <= 5000 &&
+             data.image is string && data.image.size() <= 2000000 &&
+             (!('dateReceived' in data) || data.dateReceived is string) &&
+             (!('completionTime' in data) || data.completionTime is string) &&
+             (!('downloadUrl' in data) || data.downloadUrl is string) &&
+             (!('downloadFileName' in data) || data.downloadFileName is string);
+    }
+
+    function isValidBlog(data) {
+      return data.keys().hasAll(['title', 'content', 'image']) &&
+             data.title is string && data.title.size() <= 200 &&
+             data.content is string && data.content.size() <= 10000 &&
+             data.image is string && data.image.size() <= 2000000;
     }
 
     function isValidExperience(data) {
@@ -62,6 +73,13 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isAdmin() && isValidId(expId) && isValidExperience(incoming());
       allow update: if isAdmin() && isValidExperience(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /blogs/{blogId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(blogId) && isValidBlog(incoming());
+      allow update: if isAdmin() && isValidBlog(incoming());
       allow delete: if isAdmin();
     }
   }
