@@ -57,6 +57,7 @@ interface Project {
   title: string;
   description: string;
   image: string;
+  gallery?: string[];
   link: string;
   type: 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other';
   order: number;
@@ -80,6 +81,7 @@ interface Blog {
   title: string;
   content: string;
   image: string;
+  gallery?: string[];
   date: string;
   order: number;
 }
@@ -374,6 +376,29 @@ function ProjectModal({ project, onClose }: { project: Project, onClose: () => v
     }
   };
 
+  const handleGalleryAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setData(prev => ({
+            ...prev,
+            gallery: [...(prev.gallery || []), reader.result as string]
+          }));
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const removeGalleryImage = (index: number) => {
+    setData(prev => ({
+      ...prev,
+      gallery: (prev.gallery || []).filter((_, i) => i !== index)
+    }));
+  };
+
   const save = async () => {
     if (!data.title || !data.image || !data.description) {
       alert('Please fill in Name, Image and Description');
@@ -416,6 +441,47 @@ function ProjectModal({ project, onClose }: { project: Project, onClose: () => v
                 <img src={data.image} alt="Preview" className="w-full h-full object-cover" />
               </div>
             )}
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-[10px] uppercase font-bold text-neutral-500">Project Gallery (Multiple Photos)</label>
+              <div className="relative">
+                <button className="flex items-center gap-1 text-[10px] uppercase font-bold text-indigo-400 hover:text-indigo-300 transition-colors">
+                  <Plus className="w-3 h-3" /> Add Photos
+                </button>
+                <input 
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  onChange={handleGalleryAdd} 
+                  className="absolute inset-0 opacity-0 cursor-pointer" 
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {(data.gallery || []).map((img, i) => (
+                <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-neutral-800 group">
+                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <button 
+                    onClick={() => removeGalleryImage(i)}
+                    className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+              <div className="aspect-square rounded-lg border-2 border-dashed border-neutral-800 flex items-center justify-center relative">
+                <ImageIcon className="w-4 h-4 text-neutral-700" />
+                <input 
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  onChange={handleGalleryAdd} 
+                  className="absolute inset-0 opacity-0 cursor-pointer" 
+                />
+              </div>
+            </div>
           </div>
 
           <InputField label="Live Link" value={data.link} onChange={(v: string) => setData({...data, link: v})} icon={LinkIcon} />
@@ -659,6 +725,29 @@ function BlogModal({ blog, onClose }: { blog: Blog, onClose: () => void }) {
     }
   };
 
+  const handleGalleryAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setData(prev => ({
+            ...prev,
+            gallery: [...(prev.gallery || []), reader.result as string]
+          }));
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const removeGalleryImage = (index: number) => {
+    setData(prev => ({
+      ...prev,
+      gallery: (prev.gallery || []).filter((_, i) => i !== index)
+    }));
+  };
+
   const save = async () => {
     if (!data.title || !data.image || !data.content) {
       alert('Please fill in Title, Image and Content');
@@ -694,6 +783,47 @@ function BlogModal({ blog, onClose }: { blog: Blog, onClose: () => void }) {
                 <img src={data.image} alt="Preview" className="w-full h-full object-cover" />
               </div>
             )}
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-[10px] uppercase font-bold text-neutral-500">Gallery Photos</label>
+              <div className="relative">
+                <button className="flex items-center gap-1 text-[10px] uppercase font-bold text-indigo-400 hover:text-indigo-300 transition-colors">
+                  <Plus className="w-3 h-3" /> Add Photos
+                </button>
+                <input 
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  onChange={handleGalleryAdd} 
+                  className="absolute inset-0 opacity-0 cursor-pointer" 
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {(data.gallery || []).map((img, i) => (
+                <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-neutral-800 group">
+                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <button 
+                    onClick={() => removeGalleryImage(i)}
+                    className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+              <div className="aspect-square rounded-lg border-2 border-dashed border-neutral-800 flex items-center justify-center relative">
+                <ImageIcon className="w-4 h-4 text-neutral-700" />
+                <input 
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  onChange={handleGalleryAdd} 
+                  className="absolute inset-0 opacity-0 cursor-pointer" 
+                />
+              </div>
+            </div>
           </div>
 
           <InputField label="Date" value={data.date} onChange={(v: string) => setData({...data, date: v})} icon={Calendar} />

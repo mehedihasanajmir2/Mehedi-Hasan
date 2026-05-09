@@ -41,7 +41,8 @@
         "dateReceived": { "type": "string" },
         "completionTime": { "type": "string" },
         "downloadUrl": { "type": "string" },
-        "downloadFileName": { "type": "string" }
+        "downloadFileName": { "type": "string" },
+        "gallery": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["title", "description", "type", "image"]
     },
@@ -66,6 +67,7 @@
         "title": { "type": "string" },
         "content": { "type": "string" },
         "image": { "type": "string" },
+        "gallery": { "type": "array", "items": { "type": "string" } },
         "date": { "type": "string" },
         "order": { "type": "number" }
       },

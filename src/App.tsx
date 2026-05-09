@@ -74,6 +74,7 @@ interface Project {
   github?: string;
   type: 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other';
   image: string;
+  gallery?: string[];
   order: number;
   dateReceived?: string;
   completionTime?: string;
@@ -86,6 +87,7 @@ interface Blog {
   title: string;
   content: string;
   image: string;
+  gallery?: string[];
   date: string;
   order: number;
 }
@@ -166,6 +168,63 @@ function Counter({ value }: { value: string }) {
   );
 }
 
+function GalleryModal({ images, onClose, title }: { images: string[]; onClose: () => void; title: string }) {
+  const [active, setActive] = useState(0);
+  
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex flex-col p-4 md:p-12 overflow-hidden">
+      <div className="flex justify-between items-center mb-8">
+        <h3 className="text-2xl font-black text-white uppercase tracking-tighter">{title} Gallery</h3>
+        <button onClick={onClose} className="p-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 transition-all">
+          <X className="w-6 h-6" />
+        </button>
+      </div>
+      
+      <div className="flex-grow flex flex-col md:flex-row gap-8 items-center justify-center min-h-0">
+        <div className="w-full md:w-3/4 h-full relative aspect-video flex items-center justify-center">
+          <AnimatePresence mode="wait">
+            <motion.img 
+              key={active}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.05 }}
+              src={images[active]} 
+              className="w-full h-full object-contain rounded-3xl"
+            />
+          </AnimatePresence>
+          
+          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4 pointer-events-none">
+            <button 
+              onClick={() => setActive(prev => (prev > 0 ? prev - 1 : images.length - 1))}
+              className="p-4 bg-black/50 text-white rounded-full backdrop-blur-md pointer-events-auto hover:bg-black/80 transition-all border border-white/10"
+            >
+              <ChevronRight className="w-6 h-6 rotate-180" />
+            </button>
+            <button 
+              onClick={() => setActive(prev => (prev < images.length - 1 ? prev + 1 : 0))}
+              className="p-4 bg-black/50 text-white rounded-full backdrop-blur-md pointer-events-auto hover:bg-black/80 transition-all border border-white/10"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+        
+        <div className="w-full md:w-1/4 h-full overflow-y-auto pr-4 scrollbar-hide flex flex-row md:flex-col gap-4">
+          {images.map((img, i) => (
+            <button 
+              key={i} 
+              onClick={() => setActive(i)}
+              className={`relative aspect-video rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all ${active === i ? 'border-indigo-500 scale-105' : 'border-transparent opacity-40 hover:opacity-100'}`}
+            >
+              <img src={img} className="w-full h-full object-cover" alt="" />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -180,6 +239,7 @@ export default function App() {
   const [logoClicks, setLogoClicks] = useState(0);
   const [lastClickTime, setLastClickTime] = useState(0);
   const [activeTab, setActiveTab] = useState<'all' | 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other'>('all');
+  const [viewingGallery, setViewingGallery] = useState<{ images: string[], title: string } | null>(null);
 
   // Disable scrolling when PIN modal is open
   useEffect(() => {
@@ -454,6 +514,28 @@ export default function App() {
                     <p className="text-neutral-500 text-sm mb-6 leading-tight uppercase line-clamp-3">
                       {project.description}
                     </p>
+
+                    {project.gallery && project.gallery.length > 0 && (
+                      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+                        {project.gallery.slice(0, 3).map((img, i) => (
+                          <div key={i} className="w-12 h-12 rounded-lg overflow-hidden border border-neutral-800 flex-shrink-0">
+                            <img src={img} className="w-full h-full object-cover grayscale opacity-50" />
+                          </div>
+                        ))}
+                        {project.gallery.length > 3 && (
+                          <div className="w-12 h-12 rounded-lg bg-neutral-800 flex items-center justify-center text-[10px] font-black text-neutral-400 flex-shrink-0">
+                            +{project.gallery.length - 3}
+                          </div>
+                        )}
+                        <button 
+                          onClick={() => setViewingGallery({ images: project.gallery!, title: project.title })}
+                          className="ml-auto text-[9px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-400 self-center"
+                        >
+                          View All
+                        </button>
+                      </div>
+                    )}
+
                     {(project.dateReceived || project.completionTime) && (
                       <div className="flex flex-col gap-2 mt-auto border-t border-neutral-800 pt-4">
                         {project.dateReceived && (
@@ -518,11 +600,19 @@ export default function App() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1 }}
+                onClick={() => blog.gallery && blog.gallery.length > 0 && setViewingGallery({ images: [blog.image, ...blog.gallery], title: blog.title })}
                 className="group relative h-[400px] bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden hover:border-indigo-500/50 transition-all cursor-pointer"
               >
                 <img src={blog.image} alt={blog.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-8 flex flex-col justify-end transform translate-y-12 group-hover:translate-y-0 transition-transform duration-500">
-                  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-500 mb-2">{blog.date}</span>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-500">{blog.date}</span>
+                    {blog.gallery && blog.gallery.length > 0 && (
+                      <div className="flex items-center gap-1 bg-indigo-500/10 px-2 py-1 rounded text-[8px] font-black text-indigo-400 uppercase tracking-widest">
+                        <ImageIcon className="w-2 h-2" /> {blog.gallery.length + 1} Photos
+                      </div>
+                    )}
+                  </div>
                   <h4 className="text-xl font-bold uppercase tracking-tight text-white mb-4">{blog.title}</h4>
                   <p className="text-neutral-400 text-sm leading-tight uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-500 line-clamp-3">
                     {blog.content}
@@ -1145,6 +1235,16 @@ function PINModal({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: ()
                 </div>
               </motion.div>
             </div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {viewingGallery && (
+            <GalleryModal 
+              images={viewingGallery.images} 
+              title={viewingGallery.title} 
+              onClose={() => setViewingGallery(null)} 
+            />
           )}
         </AnimatePresence>
       </div>

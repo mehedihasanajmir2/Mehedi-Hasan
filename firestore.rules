@@ -35,6 +35,7 @@ service cloud.firestore {
              data.type in ['web', 'app', 'graphic', 'digital', 'cpa', 'other'] &&
              data.description is string && data.description.size() <= 5000 &&
              data.image is string && data.image.size() <= 2000000 &&
+             (!('gallery' in data) || data.gallery is list) &&
              (!('dateReceived' in data) || data.dateReceived is string) &&
              (!('completionTime' in data) || data.completionTime is string) &&
              (!('downloadUrl' in data) || data.downloadUrl is string) &&
@@ -45,7 +46,8 @@ service cloud.firestore {
       return data.keys().hasAll(['title', 'content', 'image']) &&
              data.title is string && data.title.size() <= 200 &&
              data.content is string && data.content.size() <= 10000 &&
-             data.image is string && data.image.size() <= 2000000;
+             data.image is string && data.image.size() <= 2000000 &&
+             (!('gallery' in data) || data.gallery is list);
     }
 
     function isValidExperience(data) {
