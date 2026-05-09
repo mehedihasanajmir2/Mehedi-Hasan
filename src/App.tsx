@@ -9,6 +9,7 @@ import {
   User, 
   Layers,
   ChevronRight,
+  ArrowLeft,
   Globe,
   Smartphone,
   Plus,
@@ -243,6 +244,13 @@ export default function App() {
   const [lastClickTime, setLastClickTime] = useState(0);
   const [activeTab, setActiveTab] = useState<'all' | 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other'>('all');
   const [viewingGallery, setViewingGallery] = useState<{ images: string[], title: string } | null>(null);
+  const [selectedPost, setSelectedPost] = useState<{ type: 'project' | 'blog', id: string } | null>(null);
+
+  const selectedPostData = selectedPost ? (
+    selectedPost.type === 'project' 
+      ? projects.find(p => p.id === selectedPost.id) 
+      : blogs.find(b => b.id === selectedPost.id)
+  ) : null;
 
   // Disable scrolling when PIN modal is open
   useEffect(() => {
@@ -491,16 +499,22 @@ export default function App() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <AnimatePresence mode="popLayout">
               {filteredProjects.map((project, idx) => (
-                <motion.div layout key={project.id} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.5, delay: idx * 0.05 }} className="group relative bg-neutral-900 border border-neutral-800 overflow-hidden hover:border-indigo-500/50 transition-all duration-500">
+                <motion.div layout key={project.id} initial={{ opacity: 0, y: 30 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, scale: 0.95 }} 
+                transition={{ duration: 0.5, delay: idx * 0.05 }} 
+                onClick={() => setSelectedPost({ type: 'project', id: project.id })}
+                className="group relative bg-neutral-900 border border-neutral-800 overflow-hidden hover:border-indigo-500/50 transition-all duration-500 cursor-pointer"
+              >
                   <div className="aspect-[4/3] overflow-hidden">
                     <img src={project.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700" />
                   </div>
                   <div className="p-8">
                      <div className="flex items-center justify-between mb-4">
                       <span className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-600 group-hover:text-indigo-500 transition-colors">{project.type}</span>
-                      <div className="flex gap-3 text-neutral-600">
-                        {project.github && <a href={project.github} className="hover:text-white transition-colors" title="GitHub Source"><Github className="w-4 h-4" /></a>}
-                        {project.link && <a href={project.link} className="hover:text-white transition-colors" title="Live Preview"><ExternalLink className="w-4 h-4" /></a>}
+                      <div className="flex gap-3 text-neutral-600" onClick={(e) => e.stopPropagation()}>
+                        {project.github && <a href={project.github} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="GitHub Source"><Github className="w-4 h-4" /></a>}
+                        {project.link && <a href={project.link} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="Live Preview"><ExternalLink className="w-4 h-4" /></a>}
                       </div>
                     </div>
 
@@ -525,7 +539,7 @@ export default function App() {
                     </p>
 
                     {project.type === 'app' && project.downloadUrl && (
-                      <div className="mb-6">
+                      <div className="mb-6" onClick={(e) => e.stopPropagation()}>
                         <a 
                           href={project.downloadUrl} 
                           target="_blank"
@@ -539,14 +553,14 @@ export default function App() {
                     )}
 
                     {project.gallery && project.gallery.length > 0 && (
-                      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+                      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide" onClick={(e) => e.stopPropagation()}>
                         {project.gallery.slice(0, 3).map((img, i) => (
-                          <div key={i} className="w-12 h-12 rounded-lg overflow-hidden border border-neutral-800 flex-shrink-0">
-                            <img src={img} className="w-full h-full object-cover grayscale opacity-50" />
+                          <div key={i} onClick={() => setViewingGallery({ images: project.gallery!, title: project.title })} className="w-12 h-12 rounded-lg overflow-hidden border border-neutral-800 flex-shrink-0 cursor-zoom-in hover:border-indigo-500 transition-colors">
+                            <img src={img} className="w-full h-full object-cover grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all" />
                           </div>
                         ))}
                         {project.gallery.length > 3 && (
-                          <div className="w-12 h-12 rounded-lg bg-neutral-800 flex items-center justify-center text-[10px] font-black text-neutral-400 flex-shrink-0">
+                          <div onClick={() => setViewingGallery({ images: project.gallery!, title: project.title })} className="w-12 h-12 rounded-lg bg-neutral-800 flex items-center justify-center text-[10px] font-black text-neutral-400 flex-shrink-0 cursor-zoom-in hover:bg-neutral-700 transition-colors">
                             +{project.gallery.length - 3}
                           </div>
                         )}
@@ -623,7 +637,7 @@ export default function App() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1 }}
-                onClick={() => blog.gallery && blog.gallery.length > 0 && setViewingGallery({ images: [blog.image, ...blog.gallery], title: blog.title })}
+                onClick={() => setSelectedPost({ type: 'blog', id: blog.id })}
                 className="group relative bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden hover:border-indigo-500/50 transition-all cursor-pointer flex flex-col"
               >
                 <div className="w-full overflow-hidden">
@@ -676,7 +690,149 @@ export default function App() {
               </div>
            </div>
         </footer>
-      </main>      <AnimatePresence>
+      </main>
+
+      <AnimatePresence>
+        {selectedPost && selectedPostData && (
+          <motion.div 
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
+            className="fixed inset-0 z-[150] bg-neutral-950 overflow-y-auto"
+          >
+            <div className="max-w-7xl mx-auto px-8 pt-32 pb-24 relative">
+              <button 
+                onClick={() => setSelectedPost(null)}
+                className="fixed top-24 left-8 z-[160] flex items-center gap-2 bg-neutral-900/50 backdrop-blur-md border border-neutral-800 text-neutral-400 hover:text-white px-6 py-3 rounded-2xl transition-all font-black uppercase tracking-widest text-[10px]"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Feed
+              </button>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+                <div className="lg:col-span-8">
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="rounded-[40px] overflow-hidden border border-neutral-900 mb-12 bg-neutral-900 flex justify-center items-center group"
+                  >
+                    <img 
+                      src={selectedPost.type === 'project' ? (selectedPostData as Project).image : (selectedPostData as Blog).image} 
+                      className="max-w-full h-auto object-contain transition-transform duration-700 group-hover:scale-105" 
+                      alt=""
+                    />
+                  </motion.div>
+
+                  <h1 className="text-4xl md:text-6xl lg:text-7xl font-black uppercase tracking-tighter text-white mb-8">
+                    {selectedPostData.title}
+                  </h1>
+
+                  <div className="flex flex-wrap gap-8 items-center mb-12 py-8 border-y border-neutral-900">
+                    <div>
+                      <div className="text-[10px] uppercase font-black tracking-widest text-neutral-600 mb-1">Type</div>
+                      <div className="text-sm font-bold uppercase tracking-tight text-indigo-500">
+                        {selectedPost.type === 'project' ? (selectedPostData as Project).type : 'Blog Post'}
+                      </div>
+                    </div>
+                    {selectedPost.type === 'project' && (selectedPostData as Project).dateReceived && (
+                      <div>
+                        <div className="text-[10px] uppercase font-black tracking-widest text-neutral-600 mb-1">Started</div>
+                        <div className="text-sm font-bold uppercase tracking-tight text-neutral-400">{(selectedPostData as Project).dateReceived}</div>
+                      </div>
+                    )}
+                    {selectedPost.type === 'blog' && (selectedPostData as Blog).date && (
+                      <div>
+                        <div className="text-[10px] uppercase font-black tracking-widest text-neutral-600 mb-1">Published</div>
+                        <div className="text-sm font-bold uppercase tracking-tight text-neutral-400">{(selectedPostData as Blog).date}</div>
+                      </div>
+                    )}
+                    {selectedPost.type === 'project' && ((selectedPostData as Project).link || (selectedPostData as Project).github) && (
+                      <div className="flex items-center gap-4 ml-auto">
+                        {(selectedPostData as Project).github && (
+                          <a href={(selectedPostData as Project).github} target="_blank" rel="noopener noreferrer" className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 text-white hover:border-indigo-500 transition-all">
+                            <Github className="w-5 h-5" />
+                          </a>
+                        )}
+                        {(selectedPostData as Project).link && (
+                          <a href={(selectedPostData as Project).link} target="_blank" rel="noopener noreferrer" className="p-4 rounded-2xl bg-indigo-600 text-white hover:bg-indigo-500 transition-all flex items-center gap-3 px-8 font-black uppercase tracking-[0.2em] text-[10px]">
+                            <ExternalLink className="w-4 h-4" /> Live Preview
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="prose prose-invert max-w-none mb-24">
+                    <p className="text-xl text-neutral-400 leading-relaxed uppercase whitespace-pre-wrap font-light">
+                      {selectedPost.type === 'project' ? (selectedPostData as Project).description : (selectedPostData as Blog).content}
+                    </p>
+                  </div>
+
+                  {selectedPostData.gallery && selectedPostData.gallery.length > 0 && (
+                    <div className="mb-24">
+                      <h2 className="text-xs uppercase tracking-[0.4em] font-black text-neutral-600 mb-12">Gallery</h2>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {selectedPostData.gallery.map((img, i) => (
+                          <motion.div 
+                            key={i} 
+                            whileHover={{ scale: 1.02 }}
+                            onClick={() => setViewingGallery({ images: selectedPostData.gallery!, title: selectedPostData.title })}
+                            className="aspect-square rounded-3xl overflow-hidden border border-neutral-900 bg-neutral-900 cursor-zoom-in"
+                          >
+                            <img src={img} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all" />
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="lg:col-span-4 lg:sticky lg:top-32 self-start">
+                  <div className="p-8 rounded-[40px] border border-neutral-900 bg-neutral-950/50 backdrop-blur-md">
+                    <h2 className="text-xs uppercase tracking-[0.4em] font-black text-neutral-600 mb-8 underline decoration-indigo-500 underline-offset-8">More from Feed</h2>
+                    <div className="space-y-6">
+                      {[...projects, ...blogs]
+                        .filter(p => p.id !== selectedPost.id)
+                        .slice(0, 6)
+                        .map((post) => (
+                          <motion.div 
+                            key={post.id}
+                            onClick={() => setSelectedPost({ 
+                              type: (post as Blog).content ? 'blog' : 'project', 
+                              id: post.id 
+                            })}
+                            className="flex gap-4 group cursor-pointer"
+                          >
+                            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-800 flex-shrink-0">
+                              <img src={post.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                            </div>
+                            <div className="flex flex-col justify-center">
+                              <span className="text-[8px] font-black uppercase tracking-[0.2em] text-neutral-700 mb-1 group-hover:text-indigo-500 transition-colors">
+                                {(post as Blog).content ? 'Blog' : (post as Project).type}
+                              </span>
+                              <h4 className="text-sm font-bold uppercase tracking-tight text-neutral-400 group-hover:text-white transition-colors line-clamp-2">
+                                {post.title}
+                              </h4>
+                            </div>
+                          </motion.div>
+                        ))}
+                    </div>
+                    
+                    <button 
+                      onClick={() => setSelectedPost(null)}
+                      className="w-full mt-12 py-5 bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-2xl border border-neutral-800 font-black uppercase tracking-[0.2em] text-[10px] transition-all"
+                    >
+                      Back to Home
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {isPinModalOpen && (
           <div className="fixed inset-0 z-[200]">
             <PINModal 
