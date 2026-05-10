@@ -22,12 +22,20 @@ service cloud.firestore {
     // --- Validation Blueprints ---
     function isValidSettings(data) {
       return data.keys().hasAll(['name', 'surname', 'bio', 'profileImage', 'email']) &&
-             data.keys().size() <= 12 && // Allowing for optional fields
+             data.keys().size() <= 15 && 
              data.name is string && data.name.size() <= 100 &&
              data.surname is string && data.surname.size() <= 100 &&
-             data.bio is string && data.bio.size() <= 2000 &&
-             data.profileImage is string && data.profileImage.size() <= 1000000 &&
-             data.email is string && data.email.size() <= 200;
+             data.bio is string && data.bio.size() <= 5000 &&
+             data.profileImage is string && data.profileImage.size() <= 1048576 &&
+             data.email is string && data.email.size() <= 200 &&
+             (!('role' in data) || (data.role is string && data.role.size() <= 500)) &&
+             (!('points' in data) || (data.points is list)) &&
+             (!('stats' in data) || (data.stats is map && 
+               data.stats.keys().hasAll(['socialProjects', 'webApps', 'successRate']) &&
+               data.stats.socialProjects is string &&
+               data.stats.webApps is string &&
+               data.stats.successRate is string
+             ));
     }
 
     function isValidProject(data) {

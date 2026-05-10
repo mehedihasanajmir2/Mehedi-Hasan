@@ -219,9 +219,13 @@ function SettingsEditor({ settings }: { settings: SiteSettings }) {
   const save = async () => {
     setSaving(true);
     try {
+      console.log('Saving settings:', data);
       await setDoc(doc(db, 'settings', 'global'), data);
-      alert('Settings saved!');
-    } catch (err) { handleFirestoreError(err, OperationType.WRITE, 'settings/global'); }
+      alert('Settings saved successfully!');
+    } catch (err) { 
+      console.error('Save failed:', err);
+      handleFirestoreError(err, OperationType.WRITE, 'settings/global'); 
+    }
     finally { setSaving(false); }
   };
   return (
@@ -783,9 +787,14 @@ function StatsEditor({ settings, projects }: { settings: SiteSettings, projects:
   const save = async () => {
     setSaving(true);
     try {
-      await setDoc(doc(db, 'settings', 'global'), { ...settings, stats: data });
-      alert('Stats updated!');
-    } catch (err) { handleFirestoreError(err, OperationType.WRITE, 'settings/global'); }
+      const payload = { ...settings, stats: data };
+      console.log('Saving stats payload:', payload);
+      await setDoc(doc(db, 'settings', 'global'), payload);
+      alert('Stats updated successfully!');
+    } catch (err) { 
+      console.error('Stats save failed:', err);
+      handleFirestoreError(err, OperationType.WRITE, 'settings/global'); 
+    }
     finally { setSaving(false); }
   };
 

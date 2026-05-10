@@ -163,7 +163,7 @@ function Counter({ value }: { value: string }) {
     requestAnimationFrame(update);
   };
 
-  const suffix = value.replace(/[0-9]/g, '');
+  const suffix = (value || '').toString().replace(/[0-9]/g, '');
 
   return (
     <div ref={nodeRef} className="text-4xl lg:text-5xl font-black mb-1 italic text-indigo-500 tracking-tighter">
@@ -498,7 +498,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             <AnimatePresence mode="popLayout">
               {filteredProjects.map((project, idx) => (
                 <motion.div layout key={project.id} initial={{ opacity: 0, y: 30 }} 
@@ -511,9 +511,9 @@ export default function App() {
                   <div className="aspect-[4/3] overflow-hidden">
                     <img src={project.image} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" />
                   </div>
-                  <div className="p-5">
-                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-[8px] font-black uppercase tracking-[0.2em] text-neutral-600 group-hover:text-indigo-500 transition-colors uppercase">{project.type}</span>
+                  <div className="p-3">
+                     <div className="flex items-center justify-between mb-2">
+                      <span className="text-[7px] font-black uppercase tracking-[0.2em] text-neutral-600 group-hover:text-indigo-500 transition-colors uppercase">{project.type}</span>
                       <div className="flex gap-2 text-neutral-600" onClick={(e) => e.stopPropagation()}>
                         {project.github && <a href={project.github} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="GitHub Source"><Github className="w-3.5 h-3.5" /></a>}
                         {project.link && <a href={project.link} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="Live Preview"><ExternalLink className="w-3.5 h-3.5" /></a>}
@@ -521,19 +521,19 @@ export default function App() {
                     </div>
 
                     {project.type === 'app' && project.appLogo ? (
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-neutral-800 bg-neutral-900 group-hover:border-indigo-500/30 transition-colors">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-lg overflow-hidden border border-neutral-800 bg-neutral-900 group-hover:border-indigo-500/30 transition-colors shrink-0">
                           <img src={project.appLogo} className="w-full h-full object-cover" alt="App Logo" />
                         </div>
                         <div>
-                          <h3 className="text-lg font-black uppercase tracking-tighter text-neutral-100 line-clamp-1">{project.title}</h3>
-                          <div className="flex items-center gap-1 text-[7px] font-black uppercase tracking-wider text-green-500">
+                          <h3 className="text-sm font-black uppercase tracking-tighter text-neutral-100 line-clamp-1">{project.title}</h3>
+                          <div className="flex items-center gap-1 text-[6px] font-black uppercase tracking-wider text-green-500">
                             <Smartphone className="w-2 h-2" /> Stable
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <h3 className="text-lg font-black uppercase tracking-tighter text-neutral-100 mb-4 line-clamp-1">{project.title}</h3>
+                      <h3 className="text-sm font-black uppercase tracking-tighter text-neutral-100 mb-2 line-clamp-1">{project.title}</h3>
                     )}
 
                     {project.type === 'app' && project.downloadUrl && (
