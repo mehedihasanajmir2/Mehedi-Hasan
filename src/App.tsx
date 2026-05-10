@@ -245,6 +245,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'all' | 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other'>('all');
   const [viewingGallery, setViewingGallery] = useState<{ images: string[], title: string } | null>(null);
   const [selectedPost, setSelectedPost] = useState<{ type: 'project' | 'blog' | 'experience', id: string } | null>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
 
   const selectedPostData = selectedPost ? (
     selectedPost.type === 'project' 
@@ -670,7 +671,12 @@ export default function App() {
                  <span className="text-indigo-600">something</span>
                </h3>
              </div>
-             <a href={`mailto:${siteData.email}`} className="text-2xl md:text-4xl font-black uppercase tracking-tighter text-neutral-100 hover:text-indigo-500 transition-colors border-b-4 border-neutral-100 hover:border-indigo-500 pb-2">Send Mail</a>
+             <button 
+               onClick={() => setShowEmailModal(true)}
+               className="text-2xl md:text-4xl font-black uppercase tracking-tighter text-neutral-100 hover:text-indigo-500 transition-colors border-b-4 border-neutral-100 hover:border-indigo-500 pb-2 cursor-pointer"
+             >
+               Send Mail
+             </button>
            </div>
            <div className="flex flex-col md:flex-row justify-between items-end pb-8 gap-8">
               <div className="flex gap-16">
@@ -686,6 +692,98 @@ export default function App() {
            </div>
         </footer>
       </main>
+
+      <AnimatePresence>
+        {showEmailModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[250] flex items-center justify-center p-4 md:p-8"
+          >
+            <div 
+              className="absolute inset-0 bg-black/90 backdrop-blur-xl" 
+              onClick={() => setShowEmailModal(false)}
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-2xl bg-neutral-900 border border-neutral-800 rounded-[40px] overflow-hidden shadow-2xl"
+            >
+              <div className="p-8 md:p-12">
+                <div className="flex justify-between items-start mb-12">
+                  <div>
+                    <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter text-white leading-none">
+                      Get in <br />
+                      <span className="text-indigo-600">touch</span>
+                    </h2>
+                    <p className="mt-4 text-neutral-500 font-bold uppercase tracking-widest text-[10px]">Choose your preferred communication channel</p>
+                  </div>
+                  <button 
+                    onClick={() => setShowEmailModal(false)}
+                    className="p-4 rounded-2xl bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Personal Email */}
+                  <motion.a 
+                    whileHover={{ scale: 1.02, y: -5 }}
+                    whileTap={{ scale: 0.98 }}
+                    href="mailto:mehedihasanajmir1000@gmail.com"
+                    className="group relative flex flex-col p-8 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-indigo-500/50 transition-all overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                      <User className="w-24 h-24" />
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-white mb-6 shadow-lg shadow-indigo-500/20">
+                      <User className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-lg font-black uppercase tracking-tight text-white mb-2">Personal Email</h3>
+                    <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest mb-4">Direct Communication</p>
+                    <div className="mt-auto flex items-center gap-2 text-indigo-500 group-hover:gap-4 transition-all">
+                      <span className="text-[10px] font-black uppercase tracking-widest">Connect Now</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
+                  </motion.a>
+
+                  {/* Business Email */}
+                  <motion.a 
+                    whileHover={{ scale: 1.02, y: -5 }}
+                    whileTap={{ scale: 0.98 }}
+                    href="mailto:mehedihasanajmir2@gmail.com"
+                    className="group relative flex flex-col p-8 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-indigo-500/50 transition-all overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                      <Briefcase className="w-24 h-24" />
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-500/20">
+                      <Briefcase className="w-6 h-4" />
+                    </div>
+                    <h3 className="text-lg font-black uppercase tracking-tight text-white mb-2">Business Email</h3>
+                    <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest mb-4">Professional Inquiries</p>
+                    <div className="mt-auto flex items-center gap-2 text-blue-500 group-hover:gap-4 transition-all">
+                      <span className="text-[10px] font-black uppercase tracking-widest">Connect Now</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
+                  </motion.a>
+                </div>
+
+                <div className="mt-12 pt-8 border-t border-neutral-800 flex justify-center">
+                  <div className="flex items-center gap-3 text-neutral-600 text-[9px] font-black uppercase tracking-[0.3em]">
+                    <Mail className="w-3 h-3" />
+                    Response time: ~24 Hours
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {selectedPost && selectedPostData && (
