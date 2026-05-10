@@ -21,7 +21,11 @@ import {
   Lock,
   ShieldAlert,
   Image as ImageIcon,
-  Zap
+  Zap,
+  Copy,
+  Check,
+  Menu,
+  MessageCircle
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { 
@@ -59,8 +63,14 @@ interface SiteSettings {
   surname: string;
   role: string;
   bio: string;
+  about?: string;
+  aboutImage?: string;
+  contactImage?: string;
   profileImage: string;
   email: string;
+  businessEmail?: string;
+  whatsapp?: string;
+  linkedin?: string;
   points?: string[];
   stats: {
     socialProjects: string;
@@ -103,6 +113,7 @@ interface Experience {
   period: string;
   description: string;
   order: number;
+  logo?: string;
 }
 
 // --- Components ---
@@ -246,6 +257,17 @@ export default function App() {
   const [viewingGallery, setViewingGallery] = useState<{ images: string[], title: string } | null>(null);
   const [selectedPost, setSelectedPost] = useState<{ type: 'project' | 'blog' | 'experience', id: string } | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent, text: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopiedId(text);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const selectedPostData = selectedPost ? (
     selectedPost.type === 'project' 
@@ -345,8 +367,14 @@ export default function App() {
     surname: 'Hasan',
     role: 'Full-Stack Developer | Digital Marketer | CPA Marketer | Creative Designer',
     bio: 'Building robust web architectures and scaling businesses through creative design and strategic marketing.',
+    about: `With over a year of experience as a versatile Freelancer, I have successfully helped brands enhance their digital presence through data-driven Social Media Marketing and custom Graphic Design solutions. I specialize in building high-performance mobile applications using Java and XML, including the end-to-end development of the social connectivity app "AddaSangi". My expertise also includes full-stack mobile integration, where I have a proven track record of converting web-based platforms into functional Android applications. From managing complex hardware permissions to designing professional marketing mockups, I deliver comprehensive digital solutions that combine technical precision with creative flair.`,
+    aboutImage: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhsH3QzxWYJ-ILrnEjlNRNRuiKnkL06aNaPkLjPOInRW1EKGt_3U6Ug8W9Cbmi7Tg9IA6fj47XHAVkjWFJJswRc1m2DhwwycS6f3ZK6-9YZylwfMDs8ea4uCJlDQ2iURDiOkumcsbxrKWOfpLpxdFay6t_yQ0GU38s3-GA4KBedaO3FKaDec_tHVxYvma30/s1332/Gemini_Generated_Image_cohv0rcohv0rcohv.png',
+    contactImage: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhsH3QzxWYJ-ILrnEjlNRNRuiKnkL06aNaPkLjPOInRW1EKGt_3U6Ug8W9Cbmi7Tg9IA6fj47XHAVkjWFJJswRc1m2DhwwycS6f3ZK6-9YZylwfMDs8ea4uCJlDQ2iURDiOkumcsbxrKWOfpLpxdFay6t_yQ0GU38s3-GA4KBedaO3FKaDec_tHVxYvma30/s1332/Gemini_Generated_Image_cohv0rcohv0rcohv.png',
     profileImage: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhsH3QzxWYJ-ILrnEjlNRNRuiKnkL06aNaPkLjPOInRW1EKGt_3U6Ug8W9Cbmi7Tg9IA6fj47XHAVkjWFJJswRc1m2DhwwycS6f3ZK6-9YZylwfMDs8ea4uCJlDQ2iURDiOkumcsbxrKWOfpLpxdFay6t_yQ0GU38s3-GA4KBedaO3FKaDec_tHVxYvma30/s1332/Gemini_Generated_Image_cohv0rcohv0rcohv.png',
-    email: 'mehedihasanajmir2@gmail.com',
+    email: 'mehedihasanajmir1000@gmail.com',
+    businessEmail: 'mehedihasanajmir2@gmail.com',
+    whatsapp: '+8801946406095',
+    linkedin: 'mehedi-hasan-781014234',
     points: [
       '🚀 Building robust web architectures and scaling businesses with CPA & Digital Marketing.',
       '🎨 Crafting visual identities through Graphic Design.',
@@ -387,22 +415,78 @@ export default function App() {
       </div>
 
       <nav className="fixed top-0 left-0 w-full z-50 bg-neutral-950/80 backdrop-blur-md border-b border-neutral-900">
-        <div className="max-w-7xl mx-auto px-8 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 md:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center">
             <Logo onClick={handleLogoClick} className="scale-75 origin-left" />
           </div>
-          <div className="flex gap-12 items-center">
-            <div className="hidden md:flex gap-12 text-xs font-bold uppercase tracking-[0.2em] opacity-60">
-              {['About', 'Projects', 'Experience', 'Contact'].map((item) => (
-                <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-white hover:opacity-100 transition-all">{item}</a>
+          
+            {/* Desktop Nav */}
+          <div className="hidden md:flex gap-12 items-center">
+            <div className="flex gap-12 text-xs font-bold uppercase tracking-[0.2em] opacity-60">
+              <button onClick={() => setShowAboutModal(true)} className="hover:text-white hover:opacity-100 transition-all font-black">About</button>
+              {['Projects', 'Experience', 'Contact'].map((item) => (
+                <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-white hover:opacity-100 transition-all font-black">{item}</a>
               ))}
             </div>
           </div>
+
+          {/* Mobile Menu Toggle */}
+          <button 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-3 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white transition-all flex items-center justify-center"
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
+
+        {/* Mobile Menu Overlay */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="absolute top-20 left-0 w-full bg-neutral-950 border-b border-neutral-900 p-8 md:hidden z-40"
+            >
+              <div className="flex flex-col gap-8">
+                {['About', 'Projects', 'Experience', 'Contact'].map((item) => (
+                  <a 
+                    key={item} 
+                    href={item === 'About' ? '#' : `#${item.toLowerCase()}`} 
+                    onClick={(e) => {
+                      if (item === 'About') {
+                        e.preventDefault();
+                        setShowAboutModal(true);
+                      }
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="text-2xl font-black uppercase tracking-tighter text-neutral-100 hover:text-indigo-500 transition-all flex items-center justify-between group"
+                  >
+                    <span>{item}</span>
+                    <ChevronRight className="w-5 h-5 text-neutral-800 group-hover:text-indigo-500 transition-colors" />
+                  </a>
+                ))}
+              </div>
+              
+              <div className="mt-12 pt-8 border-t border-neutral-900">
+                <button 
+                  onClick={() => {
+                    setShowEmailModal(true);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 text-xs uppercase tracking-[0.2em] transition-all"
+                >
+                  <Mail className="w-4 h-4" />
+                  Send me a message
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       <main className="relative z-10 max-w-7xl mx-auto px-8 pt-32 pb-24">
-        <section className="mb-32 grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
+        <section id="about" className="mb-32 grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="md:col-span-12 lg:col-span-7">
 
             <h1 className="text-[60px] sm:text-[100px] lg:text-[140px] leading-[0.8] font-black text-neutral-100 uppercase tracking-tighter mb-10">
@@ -682,12 +766,12 @@ export default function App() {
               <div className="flex gap-16">
                 <div>
                   <div className="text-[10px] uppercase opacity-40 tracking-widest font-black mb-2">Location</div>
-                  <div className="text-sm font-bold uppercase tracking-tight text-neutral-300">Dhaka, BD</div>
+                  <div className="text-sm font-bold uppercase tracking-tight text-neutral-300">Narail, Khulna, Dhaka, Bangladesh</div>
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-[10px] uppercase opacity-40 tracking-widest mb-2 italic">Handcrafted with precision</div>
-                <div className="text-sm font-black uppercase tracking-tighter text-neutral-100">© 2024 {siteData.name} {siteData.surname}</div>
+                <div className="text-sm font-black uppercase tracking-tighter text-neutral-100">© 2005 {siteData.name} {siteData.surname}</div>
               </div>
            </div>
         </footer>
@@ -699,7 +783,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[250] flex items-center justify-center p-4 md:p-8"
+            className="fixed inset-0 z-[250] flex items-center justify-center p-4 md:p-8 overflow-hidden"
           >
             <div 
               className="absolute inset-0 bg-black/90 backdrop-blur-xl" 
@@ -710,41 +794,73 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl bg-neutral-900 border border-neutral-800 rounded-[40px] overflow-hidden shadow-2xl"
+              className="relative w-full max-w-2xl max-h-[90vh] bg-neutral-900 border border-neutral-800 rounded-[40px] overflow-y-auto shadow-2xl custom-scrollbar"
             >
+              <button 
+                onClick={() => setShowEmailModal(false)}
+                className="absolute top-6 right-6 z-[60] p-4 rounded-2xl bg-neutral-800/80 backdrop-blur-md text-neutral-400 hover:text-white border border-neutral-700 hover:border-indigo-500/50 transition-all transition-all group"
+              >
+                <X className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" />
+              </button>
+
               <div className="p-8 md:p-12">
-                <div className="flex justify-between items-start mb-12">
-                  <div>
+                <div className="mb-10 flex justify-center">
+                  <div className="relative group">
+                    <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-neutral-800 shadow-2xl ring-4 ring-indigo-500/20">
+                      <img 
+                        src={siteData.contactImage || siteData.profileImage} 
+                        alt={siteData.name} 
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    </div>
+                    {/* Verified Badge */}
+                    <div className="absolute bottom-1 right-1 md:bottom-2 md:right-2 w-8 h-8 md:w-10 md:h-10 bg-blue-500 border-4 border-neutral-900 rounded-full flex items-center justify-center shadow-xl z-20">
+                      <Check className="w-4 h-4 md:w-5 h-5 text-white stroke-[4]" />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-start mb-12 relative overflow-hidden">
+                  <div className="relative z-10">
                     <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter text-white leading-none">
                       Get in <br />
                       <span className="text-indigo-600">touch</span>
                     </h2>
                     <p className="mt-4 text-neutral-500 font-bold uppercase tracking-widest text-[10px]">Choose your preferred communication channel</p>
                   </div>
-                  <button 
-                    onClick={() => setShowEmailModal(false)}
-                    className="p-4 rounded-2xl bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
+                  <div className="absolute -right-4 -top-8 opacity-5">
+                    <Mail className="w-48 h-48 text-indigo-500" />
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {/* Personal Email */}
                   <motion.a 
                     whileHover={{ scale: 1.02, y: -5 }}
                     whileTap={{ scale: 0.98 }}
-                    href="mailto:mehedihasanajmir1000@gmail.com"
-                    className="group relative flex flex-col p-8 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-indigo-500/50 transition-all overflow-hidden"
+                    href={`mailto:${siteData.email}`}
+                    className="group relative flex flex-col p-8 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-indigo-500/50 transition-all overflow-hidden h-full"
                   >
                     <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                       <User className="w-24 h-24" />
                     </div>
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-white mb-6 shadow-lg shadow-indigo-500/20">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-white mb-6 shadow-lg shadow-indigo-500/20 relative">
                       <User className="w-6 h-6" />
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-black border border-indigo-500 rounded-lg flex items-center justify-center">
+                        <Mail className="w-2.5 h-2.5 text-indigo-500" />
+                      </div>
                     </div>
-                    <h3 className="text-lg font-black uppercase tracking-tight text-white mb-2">Personal Email</h3>
-                    <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest mb-4">Direct Communication</p>
+                    <h3 className="text-sm font-black uppercase tracking-tight text-white mb-1">Personal Email</h3>
+                    <div className="flex items-center gap-2 mb-4 group/mail">
+                      <p className="text-[10px] text-indigo-400 font-bold tracking-tight lowercase truncate">{siteData.email}</p>
+                      <button 
+                        onClick={(e) => handleCopy(e, siteData.email)}
+                        className="p-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-white hover:border-indigo-500/50 transition-all shrink-0"
+                      >
+                        {copiedId === siteData.email ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                      </button>
+                    </div>
+                    <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest mb-4">Direct Communication</p>
                     <div className="mt-auto flex items-center gap-2 text-indigo-500 group-hover:gap-4 transition-all">
                       <span className="text-[10px] font-black uppercase tracking-widest">Connect Now</span>
                       <ChevronRight className="w-4 h-4" />
@@ -752,25 +868,113 @@ export default function App() {
                   </motion.a>
 
                   {/* Business Email */}
-                  <motion.a 
-                    whileHover={{ scale: 1.02, y: -5 }}
-                    whileTap={{ scale: 0.98 }}
-                    href="mailto:mehedihasanajmir2@gmail.com"
-                    className="group relative flex flex-col p-8 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-indigo-500/50 transition-all overflow-hidden"
-                  >
-                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                      <Briefcase className="w-24 h-24" />
-                    </div>
-                    <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-500/20">
-                      <Briefcase className="w-6 h-4" />
-                    </div>
-                    <h3 className="text-lg font-black uppercase tracking-tight text-white mb-2">Business Email</h3>
-                    <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest mb-4">Professional Inquiries</p>
-                    <div className="mt-auto flex items-center gap-2 text-blue-500 group-hover:gap-4 transition-all">
-                      <span className="text-[10px] font-black uppercase tracking-widest">Connect Now</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </div>
-                  </motion.a>
+                  {siteData.businessEmail && (
+                    <motion.a 
+                      whileHover={{ scale: 1.02, y: -5 }}
+                      whileTap={{ scale: 0.98 }}
+                      href={`mailto:${siteData.businessEmail}`}
+                      className="group relative flex flex-col p-8 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-indigo-500/50 transition-all overflow-hidden h-full"
+                    >
+                      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <Briefcase className="w-24 h-24" />
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-500/20 relative">
+                        <Briefcase className="w-6 h-4" />
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-black border border-blue-500 rounded-lg flex items-center justify-center">
+                          <Mail className="w-2.5 h-2.5 text-blue-500" />
+                        </div>
+                      </div>
+                      <h3 className="text-sm font-black uppercase tracking-tight text-white mb-1">Business Email</h3>
+                      <div className="flex items-center gap-2 mb-4 group/mail">
+                        <p className="text-[10px] text-blue-400 font-bold tracking-tight lowercase truncate">{siteData.businessEmail}</p>
+                        <button 
+                          onClick={(e) => handleCopy(e, siteData.businessEmail!)}
+                          className="p-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-white hover:border-blue-500/50 transition-all shrink-0"
+                        >
+                          {copiedId === siteData.businessEmail ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                        </button>
+                      </div>
+                      <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest mb-4">Professional Inquiries</p>
+                      <div className="mt-auto flex items-center gap-2 text-blue-500 group-hover:gap-4 transition-all">
+                        <span className="text-[10px] font-black uppercase tracking-widest">Connect Now</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </motion.a>
+                  )}
+
+                  {/* WhatsApp */}
+                  {siteData.whatsapp && (
+                    <motion.a 
+                      whileHover={{ scale: 1.02, y: -5 }}
+                      whileTap={{ scale: 0.98 }}
+                      href={`https://wa.me/${siteData.whatsapp.replace(/\+/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative flex flex-col p-8 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-green-500/50 transition-all overflow-hidden h-full"
+                    >
+                      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <MessageCircle className="w-24 h-24 text-green-500" />
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-green-500 flex items-center justify-center text-white mb-6 shadow-lg shadow-green-500/20 relative">
+                        <User className="w-6 h-6" />
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-black border border-green-500 rounded-lg flex items-center justify-center">
+                          <MessageCircle className="w-2.5 h-2.5 text-green-500" />
+                        </div>
+                      </div>
+                      <h3 className="text-sm font-black uppercase tracking-tight text-white mb-1">WhatsApp</h3>
+                      <div className="flex items-center gap-2 mb-4 group/mail">
+                        <p className="text-[10px] text-green-400 font-bold tracking-tight truncate">{siteData.whatsapp}</p>
+                        <button 
+                          onClick={(e) => handleCopy(e, siteData.whatsapp!)}
+                          className="p-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-white hover:border-green-500/50 transition-all shrink-0"
+                        >
+                          {copiedId === siteData.whatsapp ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                        </button>
+                      </div>
+                      <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest mb-4">Instant Chat</p>
+                      <div className="mt-auto flex items-center gap-2 text-green-500 group-hover:gap-4 transition-all">
+                        <span className="text-[10px] font-black uppercase tracking-widest">Message Me</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </motion.a>
+                  )}
+
+                  {/* LinkedIn */}
+                  {siteData.linkedin && (
+                    <motion.a 
+                      whileHover={{ scale: 1.02, y: -5 }}
+                      whileTap={{ scale: 0.98 }}
+                      href={siteData.linkedin.startsWith('http') ? siteData.linkedin : `https://www.linkedin.com/in/${siteData.linkedin}/`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative flex flex-col p-8 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-blue-400/50 transition-all overflow-hidden h-full"
+                    >
+                      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <Linkedin className="w-24 h-24 text-blue-400" />
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-blue-800 flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-900/20 relative">
+                        <Briefcase className="w-6 h-4" />
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-black border border-blue-400 rounded-lg flex items-center justify-center">
+                          <Linkedin className="w-2.5 h-2.5 text-blue-400" />
+                        </div>
+                      </div>
+                      <h3 className="text-sm font-black uppercase tracking-tight text-white mb-1">LinkedIn</h3>
+                      <div className="flex items-center gap-2 mb-4 group/mail">
+                        <p className="text-[10px] text-blue-400 font-bold tracking-tight truncate">{siteData.linkedin}</p>
+                        <button 
+                          onClick={(e) => handleCopy(e, siteData.linkedin)}
+                          className="p-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-white hover:border-blue-400/50 transition-all shrink-0"
+                        >
+                          {copiedId === siteData.linkedin ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                        </button>
+                      </div>
+                      <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest mb-4">Professional Profile</p>
+                      <div className="mt-auto flex items-center gap-2 text-blue-400 group-hover:gap-4 transition-all">
+                        <span className="text-[10px] font-black uppercase tracking-widest">Connect Now</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </motion.a>
+                  )}
                 </div>
 
                 <div className="mt-12 pt-8 border-t border-neutral-800 flex justify-center">
@@ -778,6 +982,85 @@ export default function App() {
                     <Mail className="w-3 h-3" />
                     Response time: ~24 Hours
                   </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showAboutModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[250] flex items-center justify-center p-4 md:p-8 overflow-hidden"
+          >
+            <div 
+              className="absolute inset-0 bg-black/90 backdrop-blur-xl" 
+              onClick={() => setShowAboutModal(false)}
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-2xl max-h-[90vh] bg-neutral-900 border border-neutral-800 rounded-[40px] overflow-y-auto shadow-2xl custom-scrollbar"
+            >
+              <button 
+                onClick={() => setShowAboutModal(false)}
+                className="absolute top-6 right-6 z-[60] p-4 rounded-2xl bg-neutral-800/80 backdrop-blur-md text-neutral-400 hover:text-white border border-neutral-700 hover:border-indigo-500/50 transition-all group"
+              >
+                <X className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" />
+              </button>
+
+              <div className="p-8 md:p-12">
+                <div className="mb-10 flex justify-center">
+                  <div className="relative group">
+                    <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-neutral-800 shadow-2xl ring-4 ring-indigo-500/20">
+                      <img 
+                        src={siteData.aboutImage || siteData.profileImage} 
+                        alt={siteData.name} 
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    </div>
+                    {/* Verified Badge */}
+                    <div className="absolute bottom-1 right-1 md:bottom-2 md:right-2 w-8 h-8 md:w-10 md:h-10 bg-blue-500 border-4 border-neutral-900 rounded-full flex items-center justify-center shadow-xl z-20">
+                      <Check className="w-4 h-4 md:w-5 h-5 text-white stroke-[4]" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center mb-12">
+                  <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-white leading-none mb-4">
+                    About <span className="text-indigo-500">{siteData.name}</span>
+                  </h2>
+                  <div className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600">
+                    <span className="w-8 h-px bg-neutral-800" />
+                    Creative Full-Stack Developer
+                    <span className="w-8 h-px bg-neutral-800" />
+                  </div>
+                </div>
+
+                <div className="prose prose-invert max-w-none">
+                  <p className="text-lg md:text-xl text-neutral-400 leading-relaxed font-light whitespace-pre-wrap">
+                    {siteData.about || defaults.about}
+                  </p>
+                </div>
+
+                <div className="mt-12 pt-8 border-t border-neutral-800 flex justify-center">
+                  <button 
+                    onClick={() => {
+                      setShowAboutModal(false);
+                      setShowEmailModal(true);
+                    }}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 px-8 rounded-2xl flex items-center gap-3 text-xs uppercase tracking-[0.2em] transition-all active:scale-95"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Let's Connect
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -1054,7 +1337,6 @@ function AdminLoginModal({ onSuccess, onCancel }: { onSuccess: () => void; onCan
             <input 
               type="email" 
               required 
-              autoFocus
               disabled={loading || attempts >= 3}
               value={email} 
               onChange={e => setEmail(e.target.value)} 
