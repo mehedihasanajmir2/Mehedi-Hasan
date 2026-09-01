@@ -460,7 +460,7 @@ function SettingsEditor({ settings }: { settings: SiteSettings }) {
 }
 
 function ProjectsManager({ projects, onEdit }: { projects: Project[], onEdit: (p: Project) => void }) {
-  const [activeFilter, setActiveFilter] = useState<'all' | 'web' | 'app' | 'graphic' | 'digital' | 'cpa'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'graphic' | 'digital' | 'cpa' | 'web' | 'app'>('all');
 
   const deleteProject = async (id: string) => { 
     if (confirm('Permanently remove this project from your portfolio?')) { 
@@ -476,11 +476,11 @@ function ProjectsManager({ projects, onEdit }: { projects: Project[], onEdit: (p
 
   const tabs = [
     { id: 'all', label: 'All', icon: Layout },
-    { id: 'web', label: 'Web', icon: Monitor },
-    { id: 'app', label: 'App', icon: Smartphone },
     { id: 'graphic', label: 'Graphic', icon: Palette },
     { id: 'digital', label: 'Digital', icon: Share2 },
     { id: 'cpa', label: 'CPA', icon: Zap },
+    { id: 'web', label: 'Web', icon: Monitor },
+    { id: 'app', label: 'App', icon: Smartphone },
   ] as const;
 
   return (

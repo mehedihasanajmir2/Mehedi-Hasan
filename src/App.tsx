@@ -253,7 +253,7 @@ export default function App() {
   const [loginStep, setLoginStep] = useState<'pin' | 'login'>('pin');
   const [logoClicks, setLogoClicks] = useState(0);
   const [lastClickTime, setLastClickTime] = useState(0);
-  const [activeTab, setActiveTab] = useState<'all' | 'web' | 'app' | 'graphic' | 'digital' | 'cpa' | 'other'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'graphic' | 'digital' | 'cpa' | 'web' | 'app' | 'other'>('all');
   const [viewingGallery, setViewingGallery] = useState<{ images: string[], title: string } | null>(null);
   const [selectedPost, setSelectedPost] = useState<{ type: 'project' | 'blog' | 'experience', id: string } | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -565,18 +565,18 @@ export default function App() {
               <h3 className="text-4xl font-black uppercase tracking-tighter text-neutral-100">Featured Work</h3>
             </div>
             <div className="flex gap-2 md:gap-4 border-b border-neutral-900 pb-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
-              {(['all', 'web', 'app', 'graphic', 'digital', 'cpa'] as const).map((tab) => (
+              {(['all', 'graphic', 'digital', 'cpa', 'web', 'app'] as const).map((tab) => (
                 <button 
                   key={tab} 
                   onClick={() => setActiveTab(tab)} 
                   className={`text-[9px] md:text-[10px] uppercase tracking-widest font-black px-3 md:px-4 py-2 transition-all relative ${activeTab === tab ? 'text-indigo-500' : 'text-neutral-600 hover:text-neutral-300'}`}
                 >
                   {tab === 'all' && 'All'}
-                  {tab === 'web' && 'Web'}
-                  {tab === 'app' && 'App'}
                   {tab === 'graphic' && 'Graphic Design'}
                   {tab === 'digital' && 'Digital Marketing'}
                   {tab === 'cpa' && 'CPA Marketing'}
+                  {tab === 'web' && 'Web'}
+                  {tab === 'app' && 'App'}
                   {activeTab === tab && <motion.div layoutId="tab-underline" className="absolute bottom-[-9px] left-0 right-0 h-[2px] bg-indigo-500" />}
                 </button>
               ))}
